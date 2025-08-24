@@ -111,6 +111,7 @@ export function PatientManagementContent() {
     }, 500);
     return () => clearTimeout(timeoutId);
   }, [searchTerm, statusFilter]);
+
   const fetchTodayAppointments = async () => {
     try {
       setError(null);
@@ -149,7 +150,7 @@ export function PatientManagementContent() {
 
   const fetchStats = async () => {
     try {
-      const response = await dashboardAPI.getDoctorStats();
+      const response = await doctorsAPI.getDoctorStatistics();
       const { statistics } = response.data.data;
       
       setStats({
@@ -230,6 +231,18 @@ export function PatientManagementContent() {
 
       {/* Filters and Search */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-gray-50">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center mb-6">
+            <p className="text-red-600 text-sm">{error}</p>
+            <Button 
+              onClick={fetchTodayAppointments}
+              className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+        
         <div className="flex items-center justify-between mb-6">
           {/* Search */}
           <div className="relative w-80">

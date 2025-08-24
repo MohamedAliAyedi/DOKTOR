@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { doctorsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,147 +18,6 @@ import {
 import { Search, QrCode, Plus, Star, MapPin, Clock } from "lucide-react";
 import { BookAppointmentModal } from "./BookAppointmentModal";
 
-const doctorsData = [
-  {
-    id: 1,
-    name: "Dr. Charlie Wise",
-    specialty: "Dentist",
-    avatar:
-      "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    rating: 4.8,
-    reviewCount: 156,
-    location: "Downtown Medical Center",
-    experience: "8 years",
-    availableSlots: 12,
-    nextAvailable: "Today 2:00 PM",
-    isOnline: true,
-    consultationFee: "TND 75",
-    languages: ["English", "French", "Arabic"],
-    education: "Harvard Medical School",
-    specializations: [
-      "General Dentistry",
-      "Cosmetic Dentistry",
-      "Oral Surgery",
-    ],
-  },
-  {
-    id: 2,
-    name: "Dr. Sarah Johnson",
-    specialty: "Cardiologist",
-    avatar:
-      "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    rating: 4.9,
-    reviewCount: 203,
-    location: "Heart Care Clinic",
-    experience: "12 years",
-    availableSlots: 8,
-    nextAvailable: "Tomorrow 9:00 AM",
-    isOnline: false,
-    consultationFee: "TND 120",
-    languages: ["English", "Arabic"],
-    education: "Johns Hopkins University",
-    specializations: [
-      "Interventional Cardiology",
-      "Heart Surgery",
-      "Preventive Cardiology",
-    ],
-  },
-  {
-    id: 3,
-    name: "Dr. Ahmed Hassan",
-    specialty: "Neurologist",
-    avatar:
-      "https://images.pexels.com/photos/5452201/pexels-photo-5452201.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    rating: 4.7,
-    reviewCount: 89,
-    location: "Neurology Institute",
-    experience: "15 years",
-    availableSlots: 5,
-    nextAvailable: "Monday 10:00 AM",
-    isOnline: true,
-    consultationFee: "TND 150",
-    languages: ["Arabic", "French", "English"],
-    education: "University of Tunis",
-    specializations: ["Epilepsy", "Stroke Care", "Movement Disorders"],
-  },
-  {
-    id: 4,
-    name: "Dr. Fatima Ali",
-    specialty: "Pediatrician",
-    avatar:
-      "https://images.pexels.com/photos/5452274/pexels-photo-5452274.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    rating: 4.9,
-    reviewCount: 312,
-    location: "Children's Hospital",
-    experience: "10 years",
-    availableSlots: 15,
-    nextAvailable: "Today 4:00 PM",
-    isOnline: true,
-    consultationFee: "TND 80",
-    languages: ["Arabic", "English"],
-    education: "Cairo University",
-    specializations: ["Newborn Care", "Child Development", "Vaccination"],
-  },
-  {
-    id: 5,
-    name: "Dr. Michael Brown",
-    specialty: "Orthopedic Surgeon",
-    avatar:
-      "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    rating: 4.6,
-    reviewCount: 178,
-    location: "Orthopedic Center",
-    experience: "18 years",
-    availableSlots: 3,
-    nextAvailable: "Wednesday 11:00 AM",
-    isOnline: false,
-    consultationFee: "TND 200",
-    languages: ["English", "French"],
-    education: "Stanford Medical School",
-    specializations: ["Joint Replacement", "Sports Medicine", "Trauma Surgery"],
-  },
-  {
-    id: 6,
-    name: "Dr. Leila Mansouri",
-    specialty: "Dermatologist",
-    avatar:
-      "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    rating: 4.8,
-    reviewCount: 145,
-    location: "Skin Care Clinic",
-    experience: "9 years",
-    availableSlots: 7,
-    nextAvailable: "Tomorrow 3:00 PM",
-    isOnline: true,
-    consultationFee: "TND 90",
-    languages: ["Arabic", "French", "English"],
-    education: "University of Monastir",
-    specializations: ["Acne Treatment", "Skin Cancer", "Cosmetic Dermatology"],
-  },
-  {
-    id: 7,
-    name: "Dr. Omar Trabelsi",
-    specialty: "General Practitioner",
-    avatar:
-      "https://images.pexels.com/photos/5452201/pexels-photo-5452201.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    rating: 4.5,
-    reviewCount: 267,
-    location: "Family Health Center",
-    experience: "14 years",
-    availableSlots: 20,
-    nextAvailable: "Today 1:00 PM",
-    isOnline: true,
-    consultationFee: "TND 60",
-    languages: ["Arabic", "French"],
-    education: "University of Sfax",
-    specializations: [
-      "Family Medicine",
-      "Preventive Care",
-      "Chronic Disease Management",
-    ],
-  },
-];
-
 const specialties = [
   "All Specialties",
   "Dentist",
@@ -169,12 +30,71 @@ const specialties = [
 ];
 
 export function DoctorsDirectoryContent() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("All Specialties");
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [doctorsData, setDoctorsData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchDoctors();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, selectedSpecialty, showAvailableOnly]);
+
+  const fetchDoctors = async () => {
+    try {
+      setError(null);
+      const params: any = {};
+      
+      if (searchTerm) params.search = searchTerm;
+      if (selectedSpecialty !== "All Specialties") params.specialization = selectedSpecialty;
+      
+      const response = await doctorsAPI.searchDoctors(params);
+      const doctors = response.data.data.doctors;
+      
+      // Transform data to match component expectations
+      const transformedDoctors = doctors.map((doctor: any) => ({
+        id: doctor._id,
+        name: `Dr. ${doctor.user?.firstName} ${doctor.user?.lastName}`,
+        specialty: doctor.specialization,
+        avatar: doctor.user?.avatar || "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
+        rating: doctor.rating?.average || 0,
+        reviewCount: doctor.rating?.count || 0,
+        location: doctor.clinicInfo?.name || "Medical Center",
+        experience: `${doctor.experience} years`,
+        availableSlots: Math.floor(Math.random() * 20), // This would need to be calculated from actual availability
+        nextAvailable: "Today 2:00 PM", // This would need to be calculated from working hours
+        isOnline: Math.random() > 0.5, // This would come from real-time status
+        consultationFee: `TND ${doctor.consultationFee}`,
+        languages: ["Arabic", "French", "English"], // This would come from doctor profile
+        education: doctor.education?.[0]?.institution || "Medical University",
+        specializations: doctor.subSpecializations || [doctor.specialization]
+      }));
+      
+      setDoctorsData(transformedDoctors);
+    } catch (error: any) {
+      console.error('Failed to fetch doctors:', error);
+      setError('Failed to load doctors');
+      toast({
+        title: "Error",
+        description: "Failed to fetch doctors",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredDoctors = doctorsData.filter((doctor) => {
     const matchesSearch =
@@ -235,6 +155,18 @@ export function DoctorsDirectoryContent() {
 
       {/* Search and Filters */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-gray-50">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center mb-6">
+            <p className="text-red-600 text-sm">{error}</p>
+            <Button 
+              onClick={fetchDoctors}
+              className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+        
         <div className="flex items-center justify-between mb-6">
           {/* Search */}
           <div className="relative w-96">
@@ -280,7 +212,16 @@ export function DoctorsDirectoryContent() {
 
         {/* Doctors List */}
         <div className="space-y-4">
-          {filteredDoctors.map((doctor) => (
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            </div>
+          ) : filteredDoctors.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No doctors found matching your criteria
+            </div>
+          ) : (
+            filteredDoctors.map((doctor) => (
             <div
               key={doctor.id}
               className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all"
@@ -386,7 +327,8 @@ export function DoctorsDirectoryContent() {
                 </div>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
         {/* Pagination */}

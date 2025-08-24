@@ -30,7 +30,9 @@ const protect = async (req, res, next) => {
     }
 
     // Get user from token
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id)
+      .select('-password -refreshTokens')
+      .populate('doctorProfile patientProfile secretaryProfile');
     
     if (!user) {
       return next(new AppError('User not found. Token invalid.', 401));

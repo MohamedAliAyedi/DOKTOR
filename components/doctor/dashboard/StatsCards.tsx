@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { dashboardAPI } from "@/lib/api";
 import { TrendingUp, Heart, Users, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export function StatsCards() {
   const [stats, setStats] = useState<any[]>([]);
@@ -20,7 +19,7 @@ export function StatsCards() {
         setStats([
           {
             title: "Revenue this month",
-            value: `TND ${(statistics.monthlyRevenue || 0).toLocaleString()}`,
+            value: `TND ${statistics.monthlyRevenue?.toLocaleString() || 0}`,
             subtitle: "This month's earnings",
             icon: "$",
             bgColor: "bg-white",
@@ -29,7 +28,7 @@ export function StatsCards() {
           },
           {
             title: "Pending payments",
-            value: `TND ${(statistics.pendingRevenue || 0).toLocaleString()}`,
+            value: `TND ${statistics.pendingRevenue?.toLocaleString() || 0}`,
             subtitle: `${statistics.pendingBills || 0} invoices pending`,
             icon: "♥",
             bgColor: "bg-white",
@@ -56,8 +55,47 @@ export function StatsCards() {
           },
         ]);
       } catch (error) {
-        console.error("Failed to fetch stats:", error);
-        setError("Failed to load statistics");
+        console.error('Failed to fetch stats:', error);
+        setError('Failed to load statistics');
+        // Set default values on error
+        setStats([
+          {
+            title: "Revenue this month",
+            value: "TND 0",
+            subtitle: "Unable to load",
+            icon: "$",
+            bgColor: "bg-white",
+            cardBg: "bg-primary",
+            textColor: "text-primary",
+          },
+          {
+            title: "Pending payments", 
+            value: "TND 0",
+            subtitle: "Unable to load",
+            icon: "♥",
+            bgColor: "bg-white",
+            cardBg: "bg-secondary",
+            textColor: "text-secondary",
+          },
+          {
+            title: "Today's patients",
+            value: "0",
+            subtitle: "Unable to load",
+            icon: "⚡",
+            bgColor: "bg-white",
+            cardBg: "bg-yellow-400",
+            textColor: "text-yellow-400",
+          },
+          {
+            title: "Paid invoices",
+            value: "0",
+            subtitle: "Unable to load",
+            icon: "📋",
+            bgColor: "bg-white",
+            cardBg: "bg-sky-400",
+            textColor: "text-sky-400",
+          },
+        ]);
       } finally {
         setIsLoading(false);
       }
@@ -70,10 +108,7 @@ export function StatsCards() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[1, 2, 3, 4].map((index) => (
-          <div
-            key={index}
-            className="bg-white rounded-2xl shadow-lg p-6 animate-pulse"
-          >
+          <div key={index} className="bg-white rounded-2xl shadow-lg p-6 animate-pulse">
             <div className="h-4 bg-gray-200 rounded mb-2"></div>
             <div className="h-8 bg-gray-200 rounded mb-1"></div>
             <div className="h-3 bg-gray-200 rounded"></div>
@@ -82,25 +117,13 @@ export function StatsCards() {
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="col-span-full bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-          <p className="text-red-600 text-sm">{error}</p>
-          <Button
-            onClick={() => window.location.reload()}
-            className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
-          >
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {error && (
+        <div className="col-span-full bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
+      )}
       {stats.map((stat, index) => (
         <div
           key={index}

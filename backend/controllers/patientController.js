@@ -221,10 +221,24 @@ const getPatients = catchAsync(async (req, res, next) => {
   // For doctors, only show their connected patients
   if (req.user.role === 'doctor') {
     const doctor = await Doctor.findOne({ user: req.user._id });
+    if (!doctor) {
+      return next(new AppError('Doctor profile not found', 404));
+    }
     const patientIds = doctor.patients
       .filter(p => p.status === 'active')
       .map(p => p.patient);
     query._id = { $in: patientIds };
+  } else if (req.user.role === 'secretary') {
+    const secretary = await Secretary.findOne({ user: req.user._id });
+    if (secretary) {
+      const doctor = await Doctor.findById(secretary.doctor);
+      if (doctor) {
+        const patientIds = doctor.patients
+          .filter(p => p.status === 'active')
+          .map(p => p.patient);
+        query._id = { $in: patientIds };
+      }
+    }
   }
 
   // Apply filters
@@ -242,6 +256,7 @@ const getPatients = catchAsync(async (req, res, next) => {
   if (ageMin || ageMax) {
     filteredPatients = patients.filter(patient => {
       const age = patient.age;
+      if (!age) return true; // Include patients without age data
       if (ageMin && age < parseInt(ageMin)) return false;
       if (ageMax && age > parseInt(ageMax)) return false;
       return true;

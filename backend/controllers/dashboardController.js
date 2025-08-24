@@ -15,7 +15,7 @@ const getDoctorDashboardStats = catchAsync(async (req, res, next) => {
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date();
@@ -32,7 +32,10 @@ const getDoctorDashboardStats = catchAsync(async (req, res, next) => {
     completedConsultations,
     paidBills,
     pendingBills,
-    totalBills
+    totalBills,
+    recentAppointments,
+    revenueTrend,
+    patientStats
   ] = await Promise.all([
     Patient.countDocuments({ 'doctors.doctor': doctor._id, 'doctors.status': 'active' }),
     
@@ -92,79 +95,79 @@ const getDoctorDashboardStats = catchAsync(async (req, res, next) => {
     
     Bill.countDocuments({ 
       doctor: doctor._id 
+    }),
+
+    // Get recent appointments for schedule
+    Appointment.find({
+      doctor: doctor._id,
+      scheduledDate: { $gte: startOfDay },
+      status: { $in: ['scheduled', 'confirmed'] }
     })
-  ]);
+    .populate('patient', 'user patientId')
+    .populate('patient.user', 'firstName lastName avatar')
+    .sort({ scheduledDate: 1, 'scheduledTime.start': 1 })
+    .limit(5),
 
-  // Get recent appointments for schedule
-  const recentAppointments = await Appointment.find({
-    doctor: doctor._id,
-    scheduledDate: { $gte: startOfDay },
-    status: { $in: ['scheduled', 'confirmed'] }
-  })
-  .populate('patient', 'user patientId')
-  .populate('patient.user', 'firstName lastName avatar')
-  .sort({ scheduledDate: 1, 'scheduledTime.start': 1 })
-  .limit(5);
-
-  // Get revenue trend data for chart
-  const revenueTrend = await Bill.aggregate([
-    {
-      $match: {
-        doctor: doctor._id,
-        paymentStatus: 'paid',
-        'paymentDetails.paymentDate': { 
-          $gte: new Date(now.getFullYear(), now.getMonth() - 6, 1) 
-        }
-      }
-    },
-    {
-      $group: {
-        _id: {
-          year: { $year: '$paymentDetails.paymentDate' },
-          month: { $month: '$paymentDetails.paymentDate' }
-        },
-        revenue: { $sum: '$totalAmount' },
-        count: { $sum: 1 }
-      }
-    },
-    { $sort: { '_id.year': 1, '_id.month': 1 } }
-  ]);
-
-  // Get patient statistics for chart
-  const patientStats = await Appointment.aggregate([
-    {
-      $match: {
-        doctor: doctor._id,
-        scheduledDate: { $gte: new Date(now.getFullYear(), now.getMonth() - 11, 1) }
-      }
-    },
-    {
-      $group: {
-        _id: {
-          year: { $year: '$scheduledDate' },
-          month: { $month: '$scheduledDate' }
-        },
-        newPatients: { 
-          $sum: { 
-            $cond: [
-              { $eq: ['$appointmentType', 'consultation'] }, 
-              1, 
-              0
-            ] 
-          }
-        },
-        followUps: { 
-          $sum: { 
-            $cond: [
-              { $eq: ['$appointmentType', 'follow-up'] }, 
-              1, 
-              0
-            ] 
+    // Get revenue trend data for chart
+    Bill.aggregate([
+      {
+        $match: {
+          doctor: doctor._id,
+          paymentStatus: 'paid',
+          'paymentDetails.paymentDate': { 
+            $gte: new Date(now.getFullYear(), now.getMonth() - 6, 1) 
           }
         }
-      }
-    },
-    { $sort: { '_id.year': 1, '_id.month': 1 } }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$paymentDetails.paymentDate' },
+            month: { $month: '$paymentDetails.paymentDate' }
+          },
+          revenue: { $sum: '$totalAmount' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]),
+
+    // Get patient statistics for chart
+    Appointment.aggregate([
+      {
+        $match: {
+          doctor: doctor._id,
+          scheduledDate: { $gte: new Date(now.getFullYear(), now.getMonth() - 11, 1) }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$scheduledDate' },
+            month: { $month: '$scheduledDate' }
+          },
+          newPatients: { 
+            $sum: { 
+              $cond: [
+                { $eq: ['$appointmentType', 'consultation'] }, 
+                1, 
+                0
+              ] 
+            }
+          },
+          followUps: { 
+            $sum: { 
+              $cond: [
+                { $eq: ['$appointmentType', 'follow-up'] }, 
+                1, 
+                0
+              ] 
+            }
+          }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ])
   ]);
 
   res.status(200).json({
@@ -183,7 +186,7 @@ const getDoctorDashboardStats = catchAsync(async (req, res, next) => {
         totalBills
       },
       recentAppointments,
-      revenueTrend,
+      revenueTrend: revenueTrend,
       patientStats
     }
   });

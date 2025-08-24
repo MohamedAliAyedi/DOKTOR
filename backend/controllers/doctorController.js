@@ -38,10 +38,7 @@ const searchDoctors = catchAsync(async (req, res, next) => {
   }
 
   if (search) {
-    userQuery.$or = [
-      { firstName: { $regex: search, $options: 'i' } },
-      { lastName: { $regex: search, $options: 'i' } }
-    ];
+    // We'll handle search after population
   }
 
   // Build sort object
@@ -51,7 +48,7 @@ const searchDoctors = catchAsync(async (req, res, next) => {
   const doctors = await Doctor.find(query)
     .populate({
       path: 'user',
-      match: userQuery,
+      match: { role: 'doctor', isActive: true },
       select: 'firstName lastName avatar email phoneNumber'
     })
     .sort(sort)
@@ -59,7 +56,16 @@ const searchDoctors = catchAsync(async (req, res, next) => {
     .skip((page - 1) * limit);
 
   // Filter out doctors where user population failed
-  const filteredDoctors = doctors.filter(doctor => doctor.user);
+  let filteredDoctors = doctors.filter(doctor => doctor.user);
+
+  // Apply search filter after population
+  if (search) {
+    filteredDoctors = filteredDoctors.filter(doctor => 
+      doctor.user?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+      doctor.user?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+      doctor.specialization?.toLowerCase().includes(search.toLowerCase())
+    );
+  }
 
   const total = await Doctor.countDocuments(query);
 

@@ -16,6 +16,7 @@ const getBills = catchAsync(async (req, res, next) => {
     paymentStatus,
     billType,
     patientId,
+    search,
     startDate,
     endDate
   } = req.query;
@@ -25,9 +26,15 @@ const getBills = catchAsync(async (req, res, next) => {
   // Filter based on user role
   if (req.user.role === 'patient') {
     const patient = await Patient.findOne({ user: req.user._id });
+    if (!patient) {
+      return next(new AppError('Patient profile not found', 404));
+    }
     query.patient = patient._id;
   } else if (req.user.role === 'doctor') {
     const doctor = await Doctor.findOne({ user: req.user._id });
+    if (!doctor) {
+      return next(new AppError('Doctor profile not found', 404));
+    }
     query.doctor = doctor._id;
   } else if (req.user.role === 'secretary') {
     const secretary = await Secretary.findOne({ user: req.user._id });
@@ -48,6 +55,18 @@ const getBills = catchAsync(async (req, res, next) => {
     if (endDate) query.issueDate.$lte = new Date(endDate);
   }
 
+  // Search functionality
+  let populateQuery = {};
+  if (search) {
+    // We'll filter after population since we need to search in populated fields
+    populateQuery = {
+      $or: [
+        { billId: { $regex: search, $options: 'i' } },
+        { notes: { $regex: search, $options: 'i' } }
+      ]
+    };
+  }
+
   const bills = await Bill.find(query)
     .populate('patient', 'user patientId')
     .populate('doctor', 'user specialization')
@@ -57,11 +76,22 @@ const getBills = catchAsync(async (req, res, next) => {
     .limit(limit * 1)
     .skip((page - 1) * limit);
 
+  // Apply search filter after population
+  let filteredBills = bills;
+  if (search) {
+    filteredBills = bills.filter(bill => 
+      bill.billId.toLowerCase().includes(search.toLowerCase()) ||
+      bill.patient?.user?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+      bill.patient?.user?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+      bill.notes?.toLowerCase().includes(search.toLowerCase())
+    );
+  }
+
   const total = await Bill.countDocuments(query);
 
   res.status(200).json({
     status: 'success',
-    results: bills.length,
+    results: filteredBills.length,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
@@ -69,7 +99,7 @@ const getBills = catchAsync(async (req, res, next) => {
       pages: Math.ceil(total / limit)
     },
     data: {
-      bills
+      bills: filteredBills
     }
   });
 });

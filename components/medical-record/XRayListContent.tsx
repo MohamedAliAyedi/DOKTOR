@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { medicalRecordsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,65 +17,6 @@ import {
 } from "@/components/ui/select";
 import { Search, ChevronDown, FileText } from "lucide-react";
 
-const xrayData = [
-  {
-    id: 1,
-    type: "Shoulder",
-    doctorName: "Marwen Said",
-    date: "22 Jan 2024",
-    reason: "Headache",
-    prescription: "Advised CBC,Painkiller",
-  },
-  {
-    id: 2,
-    type: "Skull",
-    doctorName: "Mariem Routi",
-    date: "20 Jan 2024",
-    reason: "Headache",
-    prescription: "Advised CBC,Painkiller",
-  },
-  {
-    id: 3,
-    type: "Skull",
-    doctorName: "Ahmed Bourat",
-    date: "24 Jan 2024",
-    reason: "Headache",
-    prescription: "Advised CBC,Painkiller",
-  },
-  {
-    id: 4,
-    type: "Legs",
-    doctorName: "Hassen Louati",
-    date: "26 Jan 2024",
-    reason: "Headache",
-    prescription: "Advised CBC,Painkiller",
-  },
-  {
-    id: 5,
-    type: "Vertebral column",
-    doctorName: "Laila Hamza",
-    date: "18 Jan 2024",
-    reason: "Headache",
-    prescription: "Advised CBC,Painkiller",
-  },
-  {
-    id: 6,
-    type: "Upper Limbs",
-    doctorName: "Sami Ouni",
-    date: "28 Jan 2024",
-    reason: "Headache",
-    prescription: "Advised CBC,Painkiller",
-  },
-  {
-    id: 7,
-    type: "Vertebral column",
-    doctorName: "Sofien Jlassi",
-    date: "16 Jan 2024",
-    reason: "Headache",
-    prescription: "Advised CBC,Painkiller",
-  },
-];
-
 const filterButtons = [
   { label: "Skull", active: true },
   { label: "Vertebral Column", active: false },
@@ -84,9 +27,55 @@ const filterButtons = [
 
 export function XRayListContent() {
   const router = useRouter();
+  const { toast } = useToast();
   const [activeFilter, setActiveFilter] = useState("Skull");
   const [searchTerm, setSearchTerm] = useState("");
   const [duration, setDuration] = useState("Show all");
+  const [xrayData, setXrayData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchXRayRecords();
+  }, [activeFilter, searchTerm, duration]);
+
+  const fetchXRayRecords = async () => {
+    try {
+      setError(null);
+      const params: any = {
+        bodyPart: activeFilter !== "Show all" ? activeFilter : undefined
+      };
+      
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      
+      const response = await medicalRecordsAPI.getXRayRecords(params);
+      const records = response.data.data.records;
+      
+      // Transform data to match component expectations
+      const transformedData = records.map((record: any) => ({
+        id: record._id,
+        type: record.imagingResults?.bodyPart || 'Unknown',
+        doctorName: `${record.doctor?.user?.firstName} ${record.doctor?.user?.lastName}`,
+        date: new Date(record.createdAt).toLocaleDateString(),
+        reason: record.title || 'X-Ray examination',
+        prescription: record.imagingResults?.recommendations || 'See report for details'
+      }));
+      
+      setXrayData(transformedData);
+    } catch (error: any) {
+      console.error('Failed to fetch X-ray records:', error);
+      setError('Failed to load X-ray records');
+      toast({
+        title: "Error",
+        description: "Failed to fetch X-ray records",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleXRayClick = (id: number) => {
     router.push(`/medical-record/xray-results/${id}`);
@@ -120,6 +109,18 @@ export function XRayListContent() {
 
       {/* Main Content */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-gray-50">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center mb-6">
+            <p className="text-red-600 text-sm">{error}</p>
+            <Button 
+              onClick={fetchXRayRecords}
+              className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+        
         {/* Search and Duration Filter */}
         <div className="flex items-center justify-between mb-6">
           <div className="relative w-80">
@@ -177,7 +178,16 @@ export function XRayListContent() {
 
         {/* Table Rows */}
         <div className="space-y-1 mt-4">
-          {xrayData.map((xray) => (
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            </div>
+          ) : xrayData.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No X-ray records found
+            </div>
+          ) : (
+            xrayData.map((xray) => (
             <div
               key={xray.id}
               onClick={() => handleXRayClick(xray.id)}
@@ -211,7 +221,8 @@ export function XRayListContent() {
                 </Button>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
     </div>

@@ -104,27 +104,30 @@ const createAppointment = catchAsync(async (req, res, next) => {
   } = req.body;
 
   // Parse scheduledDate - handle multiple formats
-  let parsedDate;
   if (typeof scheduledDate === 'string') {
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(scheduledDate)) {
       const [day, month, year] = scheduledDate.split("/");
-      parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+      scheduledDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
     } else {
-      parsedDate = new Date(scheduledDate);
+      scheduledDate = new Date(scheduledDate);
     }
   } else {
-    parsedDate = new Date(scheduledDate);
+    scheduledDate = new Date(scheduledDate);
   }
 
-  if (isNaN(parsedDate.getTime())) {
+  if (isNaN(scheduledDate.getTime())) {
     return next(new AppError("Invalid scheduledDate format", 400));
   }
-  
-  scheduledDate = parsedDate;
 
   // Validate scheduledTime
   if (!scheduledTime?.start || !scheduledTime?.end) {
     return next(new AppError("scheduledTime must have start and end", 400));
+  }
+
+  // Validate time format
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  if (!timeRegex.test(scheduledTime.start) || !timeRegex.test(scheduledTime.end)) {
+    return next(new AppError("Invalid time format. Use HH:MM format", 400));
   }
 
   // Ensure end is after start
@@ -161,30 +164,21 @@ const createAppointment = catchAsync(async (req, res, next) => {
     return next(new AppError("You are not connected to this doctor", 403));
   }
 
-  // Check for scheduling conflicts - Fixed algorithm
+  // Check for scheduling conflicts
+  const appointmentDate = new Date(scheduledDate);
+  const startOfDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
+  const endOfDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate(), 23, 59, 59);
+
   const conflictingAppointment = await Appointment.findOne({
     doctor: doctorId,
-    scheduledDate: scheduledDate,
+    scheduledDate: {
+      $gte: startOfDay,
+      $lte: endOfDay
+    },
     status: { $in: ["scheduled", "confirmed", "in-progress"] },
-    $or: [
-      {
-        $and: [
-          { "scheduledTime.start": { $lte: scheduledTime.start } },
-          { "scheduledTime.end": { $gt: scheduledTime.start } }
-        ]
-      },
-      {
-        $and: [
-          { "scheduledTime.start": { $lt: scheduledTime.end } },
-          { "scheduledTime.end": { $gte: scheduledTime.end } }
-        ]
-      },
-      {
-        $and: [
-          { "scheduledTime.start": { $gte: scheduledTime.start } },
-          { "scheduledTime.end": { $lte: scheduledTime.end } }
-        ]
-      }
+    $and: [
+      { "scheduledTime.start": { $lt: scheduledTime.end } },
+      { "scheduledTime.end": { $gt: scheduledTime.start } }
     ]
   });
 

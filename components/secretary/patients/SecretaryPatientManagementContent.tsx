@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { appointmentsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import {
   Search,
   ChevronDown,
@@ -13,158 +15,48 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PatientStatusModal } from "./PatientStatusModal";
 import { PaymentModal } from "./PaymentModal";
-import { toast } from "@/hooks/use-toast";
-import { appointmentsAPI } from "@/lib/api";
-
-const patientData = [
-  {
-    id: 1,
-    name: "Marwen Said",
-    avatar:
-      "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    time: "12:24 pm",
-    date: "22 Jan 2024",
-    lastVisit: "22 Jan 2024",
-    reason: "Headache",
-    status: "Waiting",
-    paymentStatus: "Paid",
-  },
-  {
-    id: 2,
-    name: "Mariem Raali",
-    avatar:
-      "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    time: "12:24 pm",
-    date: "20 Jan 2024",
-    lastVisit: "20 Jan 2024",
-    reason: "Headache",
-    status: "Waiting",
-    paymentStatus: "Unpaid",
-  },
-  {
-    id: 3,
-    name: "Ahmed Bourat",
-    avatar:
-      "https://images.pexels.com/photos/5452201/pexels-photo-5452201.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    time: "12:24 pm",
-    date: "24 Jan 2024",
-    lastVisit: "24 Jan 2024",
-    reason: "Headache",
-    status: "Booked",
-    paymentStatus: "Paid",
-  },
-  {
-    id: 4,
-    name: "Hassen Louati",
-    avatar:
-      "https://images.pexels.com/photos/5452274/pexels-photo-5452274.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    time: "12:24 pm",
-    date: "26 Jan 2024",
-    lastVisit: "26 Jan 2024",
-    reason: "Headache",
-    status: "Waiting",
-    paymentStatus: "Unpaid",
-  },
-  {
-    id: 5,
-    name: "Laila Hamza",
-    avatar:
-      "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    time: "12:24 pm",
-    date: "18 Jan 2024",
-    lastVisit: "18 Jan 2024",
-    reason: "Headache",
-    status: "In consultation",
-    paymentStatus: "Paid",
-  },
-  {
-    id: 6,
-    name: "Sami Ouni",
-    avatar:
-      "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    time: "12:24 pm",
-    date: "28 Jan 2024",
-    lastVisit: "28 Jan 2024",
-    reason: "Headache",
-    status: "In consultation",
-    paymentStatus: "Unpaid",
-  },
-  {
-    id: 7,
-    name: "Sofien Jlassi",
-    avatar:
-      "https://images.pexels.com/photos/5452201/pexels-photo-5452201.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    time: "12:24 pm",
-    date: "16 Jan 2024",
-    lastVisit: "16 Jan 2024",
-    reason: "Headache",
-    status: "Booked",
-    paymentStatus: "Paid",
-  },
-  {
-    id: 8,
-    name: "Nada Haji",
-    avatar:
-      "https://images.pexels.com/photos/5452274/pexels-photo-5452274.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    time: "12:24 pm",
-    date: "16 Jan 2024",
-    lastVisit: "16 Jan 2024",
-    reason: "Headache",
-    status: "Booked",
-    paymentStatus: "Unpaid",
-  },
-  {
-    id: 9,
-    name: "Sirine Jablon",
-    avatar:
-      "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    time: "12:24 pm",
-    date: "16 Jan 2024",
-    lastVisit: "16 Jan 2024",
-    reason: "Headache",
-    status: "In consultation",
-    paymentStatus: "Unpaid",
-  },
-  {
-    id: 10,
-    name: "Ali Mouradi",
-    avatar:
-      "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    time: "12:24 pm",
-    date: "16 Jan 2024",
-    lastVisit: "16 Jan 2024",
-    reason: "Headache",
-    status: "Cancelled",
-    paymentStatus: "Paid",
-  },
-];
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case "Waiting":
+    case "waiting":
+    case "scheduled":
       return (
         <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-100 px-3 py-1 rounded-full text-xs font-medium">
           Waiting
         </Badge>
       );
-    case "Booked":
+    case "booked":
+    case "confirmed":
       return (
         <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded-full text-xs font-medium">
           Booked
         </Badge>
       );
-    case "In consultation":
+    case "in-progress":
       return (
         <Badge className="bg-purple-100 text-purple-600 hover:bg-purple-100 px-3 py-1 rounded-full text-xs font-medium">
           In consultation
         </Badge>
       );
-    case "Cancelled":
+    case "cancelled":
       return (
         <Badge className="bg-red-100 text-red-600 hover:bg-red-100 px-3 py-1 rounded-full text-xs font-medium">
           Cancelled
+        </Badge>
+      );
+    case "completed":
+      return (
+        <Badge className="bg-green-100 text-green-600 hover:bg-green-100 px-3 py-1 rounded-full text-xs font-medium">
+          Completed
         </Badge>
       );
     default:
@@ -178,13 +70,14 @@ const getStatusBadge = (status: string) => {
 
 const getPaymentBadge = (status: string) => {
   switch (status) {
-    case "Paid":
+    case "paid":
       return (
         <Badge className="bg-green-100 text-green-600 hover:bg-green-100 px-3 py-1 rounded-full text-xs font-medium">
           Paid
         </Badge>
       );
-    case "Unpaid":
+    case "pending":
+    case "unpaid":
       return (
         <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-100 px-3 py-1 rounded-full text-xs font-medium">
           Unpaid
@@ -200,11 +93,76 @@ const getPaymentBadge = (status: string) => {
 };
 
 export function SecretaryPatientManagementContent() {
-  const [patients, setPatients] = useState(patientData);
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [patients, setPatients] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    recovered: 35,
+    scheduled: 15,
+    totalPatients: 250
+  });
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+
+  useEffect(() => {
+    fetchTodayAppointments();
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchTodayAppointments();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
+
+  const fetchTodayAppointments = async () => {
+    try {
+      setError(null);
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      
+      const params: any = {
+        startDate: startOfDay.toISOString(),
+        endDate: endOfDay.toISOString()
+      };
+      
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      
+      const response = await appointmentsAPI.getAppointments(params);
+      const appointments = response.data.data.appointments;
+      
+      // Transform appointments to patient data format
+      const transformedPatients = appointments.map((appointment: any) => ({
+        id: appointment._id,
+        name: `${appointment.patient?.user?.firstName} ${appointment.patient?.user?.lastName}`,
+        avatar: appointment.patient?.user?.avatar || "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
+        time: appointment.scheduledTime?.start || "N/A",
+        date: new Date(appointment.scheduledDate).toLocaleDateString(),
+        lastVisit: appointment.updatedAt ? new Date(appointment.updatedAt).toLocaleDateString() : "First visit",
+        reason: appointment.reason,
+        status: appointment.status,
+        paymentStatus: appointment.billing ? "paid" : "pending"
+      }));
+      
+      setPatients(transformedPatients);
+    } catch (error: any) {
+      console.error('Failed to fetch today\'s appointments:', error);
+      setError('Failed to load today\'s appointments');
+      toast({
+        title: "Error",
+        description: "Failed to fetch today's appointments",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleStatusChange = (patient: any) => {
     setSelectedPatient(patient);
@@ -221,15 +179,15 @@ export function SecretaryPatientManagementContent() {
       try {
         // Update appointment status via API
         await appointmentsAPI.updateAppointment(patientId.toString(), {
-          status: newStatus.toLowerCase().replace(" ", "-"),
+          status: newStatus.toLowerCase().replace(' ', '-')
         });
-
+        
         setPatients(
           patients.map((p) =>
             p.id === patientId ? { ...p, status: newStatus } : p
           )
         );
-
+        
         toast({
           title: "Success",
           description: "Patient status updated successfully",
@@ -237,13 +195,12 @@ export function SecretaryPatientManagementContent() {
       } catch (error: any) {
         toast({
           title: "Error",
-          description:
-            error.response?.data?.message || "Failed to update status",
+          description: error.response?.data?.message || "Failed to update status",
           variant: "destructive",
         });
       }
     };
-
+    
     updateStatusAsync();
     setIsStatusModalOpen(false);
     setSelectedPatient(null);
@@ -259,7 +216,7 @@ export function SecretaryPatientManagementContent() {
             p.id === patientId ? { ...p, paymentStatus: newPaymentStatus } : p
           )
         );
-
+        
         toast({
           title: "Success",
           description: "Payment status updated successfully",
@@ -272,7 +229,7 @@ export function SecretaryPatientManagementContent() {
         });
       }
     };
-
+    
     updatePaymentAsync();
     setIsPaymentModalOpen(false);
     setSelectedPatient(null);
@@ -293,7 +250,7 @@ export function SecretaryPatientManagementContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-100 text-sm mb-2">Recovered</p>
-                <p className="text-4xl font-bold">35</p>
+                <p className="text-4xl font-bold">{stats.recovered}</p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                 <Heart className="w-6 h-6 text-white" />
@@ -306,7 +263,7 @@ export function SecretaryPatientManagementContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-blue-100 text-sm mb-2">Scheduled</p>
-                <p className="text-4xl font-bold">15</p>
+                <p className="text-4xl font-bold">{stats.scheduled}</p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-white" />
@@ -319,7 +276,7 @@ export function SecretaryPatientManagementContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-pink-100 text-sm mb-2">Total Patient</p>
-                <p className="text-4xl font-bold">250</p>
+                <p className="text-4xl font-bold">{stats.totalPatients}</p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                 <Users className="w-6 h-6 text-white" />
@@ -331,6 +288,18 @@ export function SecretaryPatientManagementContent() {
 
       {/* Filters and Search */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-gray-50">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center mb-6">
+            <p className="text-red-600 text-sm">{error}</p>
+            <Button 
+              onClick={fetchTodayAppointments}
+              className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+        
         <div className="flex items-center justify-between mb-6">
           {/* Search */}
           <div className="relative w-80">
@@ -390,7 +359,16 @@ export function SecretaryPatientManagementContent() {
 
         {/* Table Rows */}
         <div className="space-y-2 mt-4">
-          {patients.map((patient) => (
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            </div>
+          ) : patients.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No appointments for today
+            </div>
+          ) : (
+            patients.map((patient) => (
             <div
               key={patient.id}
               className="grid grid-cols-8 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center"
@@ -454,7 +432,8 @@ export function SecretaryPatientManagementContent() {
                 </Button>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
 

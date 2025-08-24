@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useEffect } from "react";
 import { consultationsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 
 export function ConsultationHistoryContent() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [duration, setDuration] = useState("Duration");
   const [age, setAge] = useState("Age");
@@ -24,20 +25,40 @@ export function ConsultationHistoryContent() {
   const [tableView, setTableView] = useState("Table view");
   const [consultations, setConsultations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchConsultations();
   }, []);
 
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchConsultations();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, duration, age, gender]);
+
   const fetchConsultations = async () => {
     try {
-      const response = await consultationsAPI.getConsultations({
+      setError(null);
+      const params: any = {
         status: 'completed'
+      };
+      
+      if (searchTerm) params.search = searchTerm;
+      
+      const response = await consultationsAPI.getConsultations({
+        ...params
       });
       setConsultations(response.data.data.consultations);
     } catch (error) {
       console.error('Failed to fetch consultations:', error);
+      setError('Failed to load consultations');
+      toast({
+        title: "Error",
+        description: "Failed to fetch consultations",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +86,12 @@ export function ConsultationHistoryContent() {
               History consultation list
             </h1>
             <p className="text-sm text-gray-500">
-              10 New consultations were added yesterday
+              {consultations.filter(c => {
+                const consultDate = new Date(c.createdAt);
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                return consultDate >= yesterday;
+              }).length} New consultations were added recently
             </p>
           </div>
         </div>
@@ -77,6 +103,18 @@ export function ConsultationHistoryContent() {
 
       {/* Main Content */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-gray-50">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center mb-6">
+            <p className="text-red-600 text-sm">{error}</p>
+            <Button 
+              onClick={fetchConsultations}
+              className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+        
         {/* Search and Filters */}
         <div className="flex items-center justify-between mb-6">
           {/* Search */}

@@ -179,8 +179,13 @@ appointmentSchema.virtual("isUpcoming").get(function () {
 // Pre-save middleware to generate appointment ID
 appointmentSchema.pre("save", async function (next) {
   if (!this.appointmentId) {
-    const count = await mongoose.model('Appointment').countDocuments();
-    this.appointmentId = `APT-${String(count + 1).padStart(6, '0')}`;
+    try {
+      const count = await mongoose.model('Appointment').countDocuments();
+      this.appointmentId = `APT-${String(count + 1).padStart(6, '0')}`;
+    } catch (error) {
+      console.error('Error generating appointment ID:', error);
+      this.appointmentId = `APT-${Date.now()}`;
+    }
   }
   next();
 });
