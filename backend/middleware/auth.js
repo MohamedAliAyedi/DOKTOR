@@ -17,7 +17,17 @@ const protect = async (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      if (jwtError.name === 'TokenExpiredError') {
+        return next(new AppError('Token expired. Please log in again.', 401));
+      } else if (jwtError.name === 'JsonWebTokenError') {
+        return next(new AppError('Invalid token. Please log in again.', 401));
+      }
+      return next(new AppError('Token verification failed.', 401));
+    }
 
     // Get user from token
     const user = await User.findById(decoded.id).select('-password');
@@ -38,12 +48,8 @@ const protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return next(new AppError('Invalid token.', 401));
-    } else if (error.name === 'TokenExpiredError') {
-      return next(new AppError('Token expired.', 401));
-    }
-    return next(new AppError('Token verification failed.', 401));
+    console.error('Auth middleware error:', error);
+    return next(new AppError('Authentication failed.', 401));
   }
 };
 

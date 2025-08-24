@@ -189,6 +189,8 @@ export const medicalRecordsAPI = {
   getMedicalRecords: (params?: any) => api.get('/medical-records', { params }),
   createMedicalRecord: (data: any) => api.post('/medical-records', data),
   getRecordTypes: () => api.get('/medical-records/types'),
+  getXRayRecords: (params?: any) => api.get('/medical-records/xray', { params }),
+  getBloodTestRecords: (params?: any) => api.get('/medical-records/blood-tests', { params }),
   getMedicalRecordById: (id: string) => api.get(`/medical-records/${id}`),
   updateMedicalRecord: (id: string, data: any) => api.patch(`/medical-records/${id}`, data),
   deleteMedicalRecord: (id: string) => api.delete(`/medical-records/${id}`),
@@ -277,6 +279,12 @@ export const secretariesAPI = {
   deactivateSecretary: (id: string) => api.patch(`/secretaries/${id}/deactivate`),
   getSecretaryPerformance: (id: string) => api.get(`/secretaries/${id}/performance`),
   rateSecretary: (id: string, data: any) => api.post(`/secretaries/${id}/performance/rate`, data),
+};
+
+// Dashboard API
+export const dashboardAPI = {
+  getDoctorStats: () => api.get('/dashboard/doctor/stats'),
+  getPatientStats: () => api.get('/dashboard/patient/stats'),
 };
 
 export default api;

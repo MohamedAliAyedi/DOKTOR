@@ -13,6 +13,10 @@ router.get('/', medicalRecordController.getMedicalRecords);
 router.post('/', authorize('doctor'), medicalRecordController.createMedicalRecord);
 router.get('/types', medicalRecordController.getRecordTypes);
 
+// Specific record type routes
+router.get('/xray', medicalRecordController.getXRayRecords);
+router.get('/blood-tests', medicalRecordController.getBloodTestRecords);
+
 router.get('/:id', medicalRecordController.getMedicalRecordById);
 router.patch('/:id', authorize('doctor'), medicalRecordController.updateMedicalRecord);
 router.delete('/:id', authorize('doctor'), medicalRecordController.deleteMedicalRecord);

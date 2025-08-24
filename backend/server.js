@@ -25,6 +25,7 @@ const billingRoutes = require("./routes/billing");
 const chatRoutes = require("./routes/chat");
 const notificationRoutes = require("./routes/notifications");
 const secretaryRoutes = require("./routes/secretaries");
+const dashboardRoutes = require("./routes/dashboard");
 
 // Import middleware
 const { errorHandler } = require("./middleware/errorHandler");
@@ -120,6 +121,7 @@ app.use(`/api/${apiVersion}/billing`, billingRoutes);
 app.use(`/api/${apiVersion}/chat`, chatRoutes);
 app.use(`/api/${apiVersion}/notifications`, notificationRoutes);
 app.use(`/api/${apiVersion}/secretaries`, secretaryRoutes);
+app.use(`/api/${apiVersion}/dashboard`, dashboardRoutes);
 
 // Error handling middleware
 app.use(notFound);

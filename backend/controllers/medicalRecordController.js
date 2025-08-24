@@ -13,7 +13,9 @@ const getMedicalRecords = catchAsync(async (req, res, next) => {
     patientId,
     startDate,
     endDate,
-    search
+    search,
+    bodyPart,
+    testType
   } = req.query;
 
   let query = {};
@@ -21,15 +23,28 @@ const getMedicalRecords = catchAsync(async (req, res, next) => {
   // Filter based on user role
   if (req.user.role === 'patient') {
     const patient = await Patient.findOne({ user: req.user._id });
+    if (!patient) {
+      return next(new AppError('Patient profile not found', 404));
+    }
     query.patient = patient._id;
   } else if (req.user.role === 'doctor') {
     const doctor = await Doctor.findOne({ user: req.user._id });
+    if (!doctor) {
+      return next(new AppError('Doctor profile not found', 404));
+    }
     query.doctor = doctor._id;
+  } else if (req.user.role === 'secretary') {
+    const secretary = await Secretary.findOne({ user: req.user._id });
+    if (secretary) {
+      query.doctor = secretary.doctor;
+    }
   }
 
   // Apply filters
   if (recordType) query.recordType = recordType;
   if (patientId) query.patient = patientId;
+  if (bodyPart) query['imagingResults.bodyPart'] = { $regex: bodyPart, $options: 'i' };
+  if (testType) query['labResults.testType'] = testType;
 
   // Date range filter
   if (startDate || endDate) {
@@ -44,7 +59,8 @@ const getMedicalRecords = catchAsync(async (req, res, next) => {
       { title: { $regex: search, $options: 'i' } },
       { description: { $regex: search, $options: 'i' } },
       { 'labResults.testName': { $regex: search, $options: 'i' } },
-      { 'imagingResults.imagingType': { $regex: search, $options: 'i' } }
+      { 'imagingResults.imagingType': { $regex: search, $options: 'i' } },
+      { 'imagingResults.bodyPart': { $regex: search, $options: 'i' } }
     ];
   }
 
@@ -505,5 +521,90 @@ module.exports = {
   addLabResults,
   getLabResults,
   addImagingResults,
-  getImagingResults
+  getImagingResults,
+  getXRayRecords,
+  getBloodTestRecords
 };
+// Get X-ray records specifically
+const getXRayRecords = catchAsync(async (req, res, next) => {
+  const { bodyPart, patientId } = req.query;
+  
+  let query = {
+    recordType: 'imaging',
+    'imagingResults.imagingType': 'x-ray'
+  };
+  
+  // Filter based on user role
+  if (req.user.role === 'patient') {
+    const patient = await Patient.findOne({ user: req.user._id });
+    if (!patient) {
+      return next(new AppError('Patient profile not found', 404));
+    }
+    query.patient = patient._id;
+  } else if (req.user.role === 'doctor') {
+    const doctor = await Doctor.findOne({ user: req.user._id });
+    if (!doctor) {
+      return next(new AppError('Doctor profile not found', 404));
+    }
+    query.doctor = doctor._id;
+  }
+  
+  if (patientId) query.patient = patientId;
+  if (bodyPart) query['imagingResults.bodyPart'] = { $regex: bodyPart, $options: 'i' };
+  
+  const records = await MedicalRecord.find(query)
+    .populate('patient', 'user patientId')
+    .populate('doctor', 'user specialization')
+    .populate('patient.user doctor.user', 'firstName lastName avatar')
+    .sort({ createdAt: -1 });
+    
+  res.status(200).json({
+    status: 'success',
+    results: records.length,
+    data: {
+      records
+    }
+  });
+});
+
+// Get blood test records specifically
+const getBloodTestRecords = catchAsync(async (req, res, next) => {
+  const { testType, patientId } = req.query;
+  
+  let query = {
+    recordType: 'lab-result',
+    'labResults.testType': 'blood'
+  };
+  
+  // Filter based on user role
+  if (req.user.role === 'patient') {
+    const patient = await Patient.findOne({ user: req.user._id });
+    if (!patient) {
+      return next(new AppError('Patient profile not found', 404));
+    }
+    query.patient = patient._id;
+  } else if (req.user.role === 'doctor') {
+    const doctor = await Doctor.findOne({ user: req.user._id });
+    if (!doctor) {
+      return next(new AppError('Doctor profile not found', 404));
+    }
+    query.doctor = doctor._id;
+  }
+  
+  if (patientId) query.patient = patientId;
+  if (testType) query['labResults.testName'] = { $regex: testType, $options: 'i' };
+  
+  const records = await MedicalRecord.find(query)
+    .populate('patient', 'user patientId')
+    .populate('doctor', 'user specialization')
+    .populate('patient.user doctor.user', 'firstName lastName avatar')
+    .sort({ createdAt: -1 });
+    
+  res.status(200).json({
+    status: 'success',
+    results: records.length,
+    data: {
+      records
+    }
+  });
+});

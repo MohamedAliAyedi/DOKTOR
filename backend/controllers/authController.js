@@ -343,6 +343,9 @@ const refreshToken = catchAsync(async (req, res, next) => {
       return next(new AppError("User not found", 404));
     }
 
+    if (!user.isActive) {
+      return next(new AppError('User account is deactivated', 401));
+    }
     // Check if refresh token exists in user's tokens
     const tokenExists = user.refreshTokens.some(
       (tokenObj) => tokenObj.token === refreshToken
@@ -363,10 +366,24 @@ const refreshToken = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
       status: "success",
+      message: 'Token refreshed successfully',
       token: newToken,
       refreshToken: newRefreshToken,
+      data: {
+        user: {
+          _id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar,
+          isEmailVerified: user.isEmailVerified,
+          isPhoneVerified: user.isPhoneVerified
+        }
+      }
     });
   } catch (error) {
+    console.error('Refresh token error:', error);
     return next(new AppError("Invalid refresh token", 401));
   }
 });

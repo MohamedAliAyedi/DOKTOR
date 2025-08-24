@@ -97,6 +97,7 @@ export function PatientManagementContent() {
     scheduled: 0,
     totalPatients: 0
   });
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -104,20 +105,38 @@ export function PatientManagementContent() {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchTodayAppointments();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, statusFilter]);
   const fetchTodayAppointments = async () => {
     try {
+      setError(null);
       const today = new Date();
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
       
-      const response = await appointmentsAPI.getAppointments({
+      const params: any = {
         startDate: startOfDay.toISOString(),
         endDate: endOfDay.toISOString()
-      });
+      };
+      
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      
+      if (statusFilter !== "all") {
+        params.status = statusFilter;
+      }
+      
+      const response = await appointmentsAPI.getAppointments(params);
       
       setAppointments(response.data.data.appointments);
     } catch (error) {
       console.error('Failed to fetch today\'s appointments:', error);
+      setError('Failed to load today\'s appointments');
       toast({
         title: "Error",
         description: "Failed to fetch today's appointments",
@@ -130,18 +149,13 @@ export function PatientManagementContent() {
 
   const fetchStats = async () => {
     try {
-      const [appointmentStats, doctorStats] = await Promise.all([
-        appointmentsAPI.getAppointmentStatistics(),
-        doctorsAPI.getDoctorStatistics()
-      ]);
-      
-      const appointmentData = appointmentStats.data.data.statistics;
-      const doctorData = doctorStats.data.data.statistics;
+      const response = await dashboardAPI.getDoctorStats();
+      const { statistics } = response.data.data;
       
       setStats({
-        recovered: appointmentData.completedAppointments || 0,
-        scheduled: appointmentData.totalAppointments - (appointmentData.completedAppointments || 0),
-        totalPatients: doctorData.totalPatients || 0
+        recovered: statistics.completedConsultations || 0,
+        scheduled: statistics.todayAppointments || 0,
+        totalPatients: statistics.totalPatients || 0
       });
     } catch (error) {
       console.error('Failed to fetch stats:', error);

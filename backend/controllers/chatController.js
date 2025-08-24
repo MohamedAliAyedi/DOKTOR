@@ -145,7 +145,7 @@ const getChatById = catchAsync(async (req, res, next) => {
 // Get chat messages
 const getChatMessages = catchAsync(async (req, res, next) => {
   const { chatId } = req.params;
-  const { page = 1, limit = 50, before } = req.query;
+  const { page = 1, limit = 50, before, after } = req.query;
 
   // Verify chat access
   const chat = await Chat.findById(chatId);
@@ -165,16 +165,21 @@ const getChatMessages = catchAsync(async (req, res, next) => {
   
   if (before) {
     query.createdAt = { $lt: new Date(before) };
+  } else if (after) {
+    query.createdAt = { $gt: new Date(after) };
   }
 
-  const messages = await Message.find(query)
+  const [messages, total] = await Promise.all([
+    Message.find(query)
     .populate('sender', 'firstName lastName avatar role')
     .populate('replyTo', 'content sender')
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: before ? -1 : 1 })
     .limit(limit * 1)
-    .skip((page - 1) * limit);
+    .skip((page - 1) * limit),
+    
+    Message.countDocuments({ chat: chatId, isDeleted: false })
+  ]);
 
-  const total = await Message.countDocuments({ chat: chatId, isDeleted: false });
 
   res.status(200).json({
     status: 'success',
@@ -183,10 +188,11 @@ const getChatMessages = catchAsync(async (req, res, next) => {
       page: parseInt(page),
       limit: parseInt(limit),
       total,
-      pages: Math.ceil(total / limit)
+      pages: Math.ceil(total / limit),
+      hasMore: messages.length === limit
     },
     data: {
-      messages: messages.reverse() // Reverse to show oldest first
+      messages: before ? messages.reverse() : messages
     }
   });
 });

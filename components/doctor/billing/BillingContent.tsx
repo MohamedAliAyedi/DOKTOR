@@ -109,6 +109,7 @@ export function BillingContent() {
   const [revenueData, setRevenueData] = useState<any>({});
   const [incomeBreakdown, setIncomeBreakdown] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBillingData();
@@ -116,6 +117,8 @@ export function BillingContent() {
 
   const fetchBillingData = async () => {
     try {
+      setError(null);
+      setIsLoading(true);
       const [statsResponse, billsResponse, revenueResponse] = await Promise.all([
         billingAPI.getBillingStatistics(),
         billingAPI.getBills({ limit: 10 }),
@@ -173,6 +176,7 @@ export function BillingContent() {
 
     } catch (error) {
       console.error('Failed to fetch billing data:', error);
+      setError('Failed to load billing data');
       toast({
         title: "Error",
         description: "Failed to fetch billing data",
@@ -186,6 +190,18 @@ export function BillingContent() {
   if (isLoading) {
     return (
       <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-8 bg-gray-200 rounded w-32 animate-pulse"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-2xl p-6 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded mb-1"></div>
+              <div className="h-3 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
         </div>
@@ -193,6 +209,21 @@ export function BillingContent() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+          <p className="text-red-600 text-sm">{error}</p>
+          <Button 
+            onClick={fetchBillingData}
+            className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-6">
       {/* Header */}

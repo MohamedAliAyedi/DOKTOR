@@ -32,6 +32,7 @@ export function DoctorsContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export function DoctorsContent() {
 
   const fetchMyDoctors = async () => {
     try {
+      setError(null);
       const response = await patientsAPI.getPatientDoctors();
       const connectedDoctors = response.data.data.doctors
         .filter((d: any) => d.status === 'active')
@@ -51,6 +53,12 @@ export function DoctorsContent() {
       setDoctors(connectedDoctors);
     } catch (error) {
       console.error('Failed to fetch connected doctors:', error);
+      setError('Failed to load connected doctors');
+      toast({
+        title: "Error",
+        description: "Failed to load your connected doctors",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +66,7 @@ export function DoctorsContent() {
 
   const handleDisconnectDoctor = async (doctorId: string) => {
     try {
-      await patientsAPI.disconnectPatient(doctorId);
+      await doctorsAPI.disconnectFromDoctor(doctorId);
       toast({
         title: "Success",
         description: "Disconnected from doctor successfully",

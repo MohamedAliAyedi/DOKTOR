@@ -157,14 +157,15 @@ const createAppointment = catchAsync(async (req, res, next) => {
   // Check for scheduling conflicts
   const conflictingAppointment = await Appointment.findOne({
     doctor: doctorId,
-    scheduledDate,
+    scheduledDate: {
+      $gte: new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate()),
+      $lt: new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate() + 1)
+    },
     status: { $in: ["scheduled", "confirmed", "in-progress"] },
-    $or: [
-      {
-        "scheduledTime.start": { $lt: scheduledTime.end },
-        "scheduledTime.end": { $gt: scheduledTime.start },
-      },
-    ],
+    $and: [
+      { "scheduledTime.start": { $lt: scheduledTime.end } },
+      { "scheduledTime.end": { $gt: scheduledTime.start } }
+    ]
   });
 
   if (conflictingAppointment) {
@@ -649,7 +650,15 @@ const getAppointmentStatistics = catchAsync(async (req, res, next) => {
 
   if (req.user.role === "doctor") {
     const doctor = await Doctor.findOne({ user: req.user._id });
+    if (!doctor) {
+      return next(new AppError('Doctor profile not found', 404));
+    }
     matchQuery.doctor = doctor._id;
+  } else if (req.user.role === "secretary") {
+    const secretary = await Secretary.findOne({ user: req.user._id });
+    if (secretary) {
+      matchQuery.doctor = secretary.doctor;
+    }
   }
 
   if (startDate || endDate) {
@@ -658,36 +667,76 @@ const getAppointmentStatistics = catchAsync(async (req, res, next) => {
     if (endDate) matchQuery.scheduledDate.$lte = new Date(endDate);
   }
 
-  const stats = await Appointment.aggregate([
-    { $match: matchQuery },
-    {
-      $group: {
-        _id: null,
-        totalAppointments: { $sum: 1 },
-        completedAppointments: {
-          $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
-        },
-        cancelledAppointments: {
-          $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
-        },
-        noShowAppointments: {
-          $sum: { $cond: [{ $eq: ["$status", "no-show"] }, 1, 0] },
-        },
-        averageDuration: { $avg: "$duration" },
-        appointmentsByType: {
-          $push: "$appointmentType",
-        },
-        appointmentsByStatus: {
-          $push: "$status",
+  const [stats, monthlyTrend] = await Promise.all([
+    Appointment.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: null,
+          totalAppointments: { $sum: 1 },
+          completedAppointments: {
+            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+          },
+          cancelledAppointments: {
+            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
+          },
+          noShowAppointments: {
+            $sum: { $cond: [{ $eq: ["$status", "no-show"] }, 1, 0] },
+          },
+          scheduledAppointments: {
+            $sum: { $cond: [{ $in: ["$status", ["scheduled", "confirmed"]] }, 1, 0] },
+          },
+          averageDuration: { $avg: "$duration" },
+          appointmentsByType: {
+            $push: "$appointmentType",
+          },
+          appointmentsByStatus: {
+            $push: "$status",
+          },
         },
       },
-    },
+    ]),
+    
+    // Get monthly trend for the last 12 months
+    Appointment.aggregate([
+      { 
+        $match: {
+          ...matchQuery,
+          scheduledDate: { 
+            $gte: new Date(new Date().getFullYear(), new Date().getMonth() - 11, 1) 
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$scheduledDate" },
+            month: { $month: "$scheduledDate" }
+          },
+          count: { $sum: 1 },
+          completed: {
+            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }
+    ])
   ]);
 
   res.status(200).json({
     status: "success",
     data: {
-      statistics: stats[0] || {},
+      statistics: stats[0] || {
+        totalAppointments: 0,
+        completedAppointments: 0,
+        cancelledAppointments: 0,
+        noShowAppointments: 0,
+        scheduledAppointments: 0,
+        averageDuration: 0,
+        appointmentsByType: [],
+        appointmentsByStatus: []
+      },
+      monthlyTrend
     },
   });
 });

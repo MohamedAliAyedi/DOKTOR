@@ -9,6 +9,7 @@ import { ArrowRight, Bell } from "lucide-react";
 export function AppointmentsSection() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUpcomingAppointments();
@@ -16,23 +17,29 @@ export function AppointmentsSection() {
 
   const fetchUpcomingAppointments = async () => {
     try {
+      setError(null);
       const response = await appointmentsAPI.getUpcomingAppointments({ limit: 3 });
       setAppointments(response.data.data.appointments);
     } catch (error) {
       console.error('Failed to fetch appointments:', error);
+      setError('Failed to load appointments');
     } finally {
       setIsLoading(false);
     }
   };
 
   const calculateTimeUntil = (scheduledDate: string, scheduledTime: string) => {
-    const appointmentDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+    const appointmentDateTime = new Date(scheduledDate);
+    const [hours, minutes] = scheduledTime.split(':');
+    appointmentDateTime.setHours(parseInt(hours), parseInt(minutes));
+    
     const now = new Date();
     const diffTime = appointmentDateTime.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Tomorrow";
+    if (diffDays < 0) return "Past";
     return `in ${diffDays} days`;
   };
 
@@ -54,6 +61,16 @@ export function AppointmentsSection() {
       {isLoading ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+          <p className="text-red-600 text-sm">{error}</p>
+          <Button 
+            onClick={fetchUpcomingAppointments}
+            className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+          >
+            Retry
+          </Button>
         </div>
       ) : appointments.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
