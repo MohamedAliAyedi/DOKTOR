@@ -103,17 +103,24 @@ const createAppointment = catchAsync(async (req, res, next) => {
     priority = "normal",
   } = req.body;
 
-  // Parse scheduledDate if in DD/MM/YYYY format
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(scheduledDate)) {
-    const [day, month, year] = scheduledDate.split("/");
-    scheduledDate = new Date(`${year}-${month}-${day}`);
+  // Parse scheduledDate - handle multiple formats
+  let parsedDate;
+  if (typeof scheduledDate === 'string') {
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(scheduledDate)) {
+      const [day, month, year] = scheduledDate.split("/");
+      parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+    } else {
+      parsedDate = new Date(scheduledDate);
+    }
   } else {
-    scheduledDate = new Date(scheduledDate);
+    parsedDate = new Date(scheduledDate);
   }
 
-  if (isNaN(scheduledDate.getTime())) {
+  if (isNaN(parsedDate.getTime())) {
     return next(new AppError("Invalid scheduledDate format", 400));
   }
+  
+  scheduledDate = parsedDate;
 
   // Validate scheduledTime
   if (!scheduledTime?.start || !scheduledTime?.end) {
@@ -154,17 +161,30 @@ const createAppointment = catchAsync(async (req, res, next) => {
     return next(new AppError("You are not connected to this doctor", 403));
   }
 
-  // Check for scheduling conflicts
+  // Check for scheduling conflicts - Fixed algorithm
   const conflictingAppointment = await Appointment.findOne({
     doctor: doctorId,
-    scheduledDate: {
-      $gte: new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate()),
-      $lt: new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate() + 1)
-    },
+    scheduledDate: scheduledDate,
     status: { $in: ["scheduled", "confirmed", "in-progress"] },
-    $and: [
-      { "scheduledTime.start": { $lt: scheduledTime.end } },
-      { "scheduledTime.end": { $gt: scheduledTime.start } }
+    $or: [
+      {
+        $and: [
+          { "scheduledTime.start": { $lte: scheduledTime.start } },
+          { "scheduledTime.end": { $gt: scheduledTime.start } }
+        ]
+      },
+      {
+        $and: [
+          { "scheduledTime.start": { $lt: scheduledTime.end } },
+          { "scheduledTime.end": { $gte: scheduledTime.end } }
+        ]
+      },
+      {
+        $and: [
+          { "scheduledTime.start": { $gte: scheduledTime.start } },
+          { "scheduledTime.end": { $lte: scheduledTime.end } }
+        ]
+      }
     ]
   });
 
@@ -172,12 +192,8 @@ const createAppointment = catchAsync(async (req, res, next) => {
     return next(new AppError("Time slot is not available", 409));
   }
 
-  const appointmentCount = await Appointment.countDocuments();
-  const appointmentId = `APT-${String(appointmentCount + 1).padStart(6, "0")}`;
-
   // Create appointment
   const appointment = await Appointment.create({
-    appointmentId,
     patient: patient._id,
     doctor: doctorId,
     appointmentType,

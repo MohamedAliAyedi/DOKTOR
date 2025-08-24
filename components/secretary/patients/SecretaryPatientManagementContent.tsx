@@ -13,15 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { PatientStatusModal } from "./PatientStatusModal";
 import { PaymentModal } from "./PaymentModal";
+import { toast } from "@/hooks/use-toast";
+import { appointmentsAPI } from "@/lib/api";
 
 const patientData = [
   {
@@ -226,15 +221,15 @@ export function SecretaryPatientManagementContent() {
       try {
         // Update appointment status via API
         await appointmentsAPI.updateAppointment(patientId.toString(), {
-          status: newStatus.toLowerCase().replace(' ', '-')
+          status: newStatus.toLowerCase().replace(" ", "-"),
         });
-        
+
         setPatients(
           patients.map((p) =>
             p.id === patientId ? { ...p, status: newStatus } : p
           )
         );
-        
+
         toast({
           title: "Success",
           description: "Patient status updated successfully",
@@ -242,12 +237,13 @@ export function SecretaryPatientManagementContent() {
       } catch (error: any) {
         toast({
           title: "Error",
-          description: error.response?.data?.message || "Failed to update status",
+          description:
+            error.response?.data?.message || "Failed to update status",
           variant: "destructive",
         });
       }
     };
-    
+
     updateStatusAsync();
     setIsStatusModalOpen(false);
     setSelectedPatient(null);
@@ -263,7 +259,7 @@ export function SecretaryPatientManagementContent() {
             p.id === patientId ? { ...p, paymentStatus: newPaymentStatus } : p
           )
         );
-        
+
         toast({
           title: "Success",
           description: "Payment status updated successfully",
@@ -276,7 +272,7 @@ export function SecretaryPatientManagementContent() {
         });
       }
     };
-    
+
     updatePaymentAsync();
     setIsPaymentModalOpen(false);
     setSelectedPatient(null);

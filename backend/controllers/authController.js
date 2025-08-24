@@ -135,9 +135,6 @@ const login = catchAsync(async (req, res, next) => {
 
   const { email, password } = req.body;
 
-  console.log("Email:", email);
-  console.log("Password:", password);
-
   // Find user and include password
   const user = await User.findOne({ email }).select("+password");
 
@@ -163,6 +160,10 @@ const login = catchAsync(async (req, res, next) => {
   }
 
   // Check password
+  if (!password) {
+    return next(new AppError("Password is required", 400));
+  }
+
   const isPasswordCorrect = await user.comparePassword(password);
 
   if (!isPasswordCorrect) {
