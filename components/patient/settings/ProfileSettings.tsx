@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { patientsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,15 +12,77 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Copy } from "lucide-react";
 
 export function ProfileSettings() {
-  const [firstName, setFirstName] = useState("Ahmed");
-  const [lastName, setLastName] = useState("Ben Ahmed");
-  const [email, setEmail] = useState("Ahmed@mail.com");
-  const [phoneNumber, setPhoneNumber] = useState("+216 92 928 2891");
-  const [licenceId, setLicenceId] = useState("");
-  const [address, setAddress] = useState("21 Street, Hammamet");
+  const { user, updateProfile } = useAuth();
+  const { toast } = useToast();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [patientId, setPatientId] = useState("");
+  const [address, setAddress] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+      setEmail(user.email || "");
+      setPhoneNumber(user.phoneNumber || "");
+      
+      // Fetch patient profile for additional fields
+      fetchPatientProfile();
+    }
+  }, [user]);
+
+  const fetchPatientProfile = async () => {
+    try {
+      const response = await patientsAPI.getPatientProfile();
+      const patientProfile = response.data.data.patient;
+      setPatientId(patientProfile.patientId || "");
+      setAddress(patientProfile.address?.street || "");
+    } catch (error) {
+      console.error('Failed to fetch patient profile:', error);
+    }
+  };
 
   const copyUserId = () => {
-    navigator.clipboard.writeText("215368");
+    navigator.clipboard.writeText(user?._id || "");
+    toast({
+      title: "Success",
+      description: "User ID copied to clipboard",
+    });
+  };
+
+  const handleSaveChanges = async () => {
+    setIsLoading(true);
+    try {
+      // Update user profile
+      await updateProfile({
+        firstName,
+        lastName,
+        phoneNumber
+      });
+
+      // Update patient profile
+      await patientsAPI.updatePatientProfile({
+        address: {
+          street: address
+        }
+      });
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -27,9 +93,9 @@ export function ProfileSettings() {
         {/* Avatar Section */}
         <div className="flex flex-col items-center">
           <Avatar className="w-32 h-32 mb-4">
-            <AvatarImage src="https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop&crop=face" />
+            <AvatarImage src={user?.avatar || "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop&crop=face"} />
             <AvatarFallback className="bg-blue-500 text-white text-2xl">
-              A
+              {user?.firstName?.[0]}{user?.lastName?.[0]}
             </AvatarFallback>
           </Avatar>
           <button className="text-sm text-blue-500 hover:text-blue-600">
@@ -40,7 +106,9 @@ export function ProfileSettings() {
           <div className="mt-8 text-center">
             <h3 className="text-lg font-semibold text-pink-500 mb-2">My ID</h3>
             <div className="flex items-center space-x-2">
-              <span className="text-2xl font-bold text-gray-700">215368</span>
+              <span className="text-2xl font-bold text-gray-700">
+                {patientId || user?._id?.slice(-6) || "N/A"}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -82,6 +150,7 @@ export function ProfileSettings() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+              disabled
             />
           </div>
 
@@ -95,14 +164,13 @@ export function ProfileSettings() {
             />
           </div>
 
-          {/* Licence ID */}
+          {/* Patient ID */}
           <div className="space-y-2">
-            <Label className="text-sm text-blue-500">Licence ID</Label>
+            <Label className="text-sm text-blue-500">Patient ID</Label>
             <Input
-              placeholder="Enter licence ID"
-              value={licenceId}
-              onChange={(e) => setLicenceId(e.target.value)}
+              value={patientId}
               className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+              disabled
             />
           </div>
 
@@ -120,8 +188,12 @@ export function ProfileSettings() {
 
       {/* Save Button */}
       <div className="flex justify-center">
-        <Button className="bg-blue-500 hover:bg-blue-600 text-white px-16 py-3 h-12 rounded-full font-medium">
-          Save changes
+        <Button 
+          className="bg-blue-500 hover:bg-blue-600 text-white px-16 py-3 h-12 rounded-full font-medium"
+          onClick={handleSaveChanges}
+          disabled={isLoading}
+        >
+          {isLoading ? "Saving..." : "Save changes"}
         </Button>
       </div>
     </div>

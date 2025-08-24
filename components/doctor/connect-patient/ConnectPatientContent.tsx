@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { patientsAPI, usersAPI } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Upload, Camera, Share2, Phone, Mail } from "lucide-react";
+import { X, Upload, Camera, Share2, Phone, Mail, QrCode } from "lucide-react";
 
 export function ConnectPatientContent() {
+  const { user } = useAuth();
   const [patientId, setPatientId] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
@@ -26,29 +28,19 @@ export function ConnectPatientContent() {
 
     setIsLoading(true);
     try {
-      // Find patient by ID and send connection request
-      const searchResponse = await usersAPI.searchUsers({
-        query: patientId,
-        role: 'patient'
-      });
-
-      if (searchResponse.data.data.users.length === 0) {
-        throw new Error("Patient not found");
-      }
-
-      const patient = searchResponse.data.data.users[0];
-      await patientsAPI.acceptPatientConnection(patient._id);
+      // Accept patient connection directly by patient ID
+      await patientsAPI.acceptPatientConnection(patientId);
 
       toast({
         title: "Success",
-        description: "Connection request sent successfully",
+        description: "Patient connected successfully",
       });
       
       setPatientId("");
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to send connection request",
+        description: error.response?.data?.message || "Failed to connect patient",
         variant: "destructive",
       });
     } finally {
@@ -66,11 +58,33 @@ export function ConnectPatientContent() {
       return;
     }
 
-    // This would typically send an SMS invitation
-    toast({
-      title: "Success",
-      description: "Phone invitation sent successfully",
-    });
+    try {
+      // Create invitation link with phone number
+      const inviteData = {
+        type: 'doctor-invite',
+        phoneNumber: phoneNumber,
+        doctorId: user?._id,
+        doctorName: `${user?.firstName} ${user?.lastName}`
+      };
+      
+      const inviteLink = `${window.location.origin}/patient/connect-doctor?invite=${btoa(JSON.stringify(inviteData))}`;
+      
+      // Copy to clipboard for now (in real app, would send SMS)
+      navigator.clipboard.writeText(`Dr. ${user?.firstName} ${user?.lastName} has invited you to connect on DOKTOR: ${inviteLink}`);
+      
+      toast({
+        title: "Success",
+        description: "Invitation link copied to clipboard. Send this via SMS.",
+      });
+      
+      setPhoneNumber("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create invitation",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSendEmailInvitation = async () => {
@@ -83,20 +97,49 @@ export function ConnectPatientContent() {
       return;
     }
 
-    // This would typically send an email invitation
-    toast({
-      title: "Success",
-      description: "Email invitation sent successfully",
-    });
+    try {
+      // Create invitation link with email
+      const inviteData = {
+        type: 'doctor-invite',
+        email: email,
+        doctorId: user?._id,
+        doctorName: `${user?.firstName} ${user?.lastName}`
+      };
+      
+      const inviteLink = `${window.location.origin}/patient/connect-doctor?invite=${btoa(JSON.stringify(inviteData))}`;
+      
+      // Copy to clipboard for now (in real app, would send email)
+      navigator.clipboard.writeText(`Dr. ${user?.firstName} ${user?.lastName} has invited you to connect on DOKTOR: ${inviteLink}`);
+      
+      toast({
+        title: "Success",
+        description: "Invitation link copied to clipboard. Send this via email.",
+      });
+      
+      setEmail("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create invitation",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleShareLink = () => {
-    const shareUrl = `${window.location.origin}/connect-doctor?ref=${btoa(JSON.stringify({ type: 'doctor' }))}`;
+    const shareData = {
+      type: 'doctor-invite',
+      doctorId: user?._id,
+      doctorName: `${user?.firstName} ${user?.lastName}`,
+      timestamp: Date.now()
+    };
+    
+    const shareUrl = `${window.location.origin}/patient/connect-doctor?invite=${btoa(JSON.stringify(shareData))}`;
     
     if (navigator.share) {
       navigator.share({
-        title: 'Connect with me on DOKTOR',
-        text: 'Join me on DOKTOR for better healthcare management',
+        title: 'Connect with your doctor on DOKTOR',
+        text: `Dr. ${user?.firstName} ${user?.lastName} has invited you to connect on DOKTOR for better healthcare management`,
         url: shareUrl
       });
     } else {
@@ -108,7 +151,7 @@ export function ConnectPatientContent() {
     }
   };
 
-  const handleUploadHeader = () => {
+  const handleUploadQR = () => {
     // Create file input for QR code upload
     const input = document.createElement('input');
     input.type = 'file';
@@ -116,10 +159,11 @@ export function ConnectPatientContent() {
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        // Process QR code file
+        // In a real app, you would process the QR code here
+        // For now, just show success message
         toast({
           title: "Success",
-          description: "QR code uploaded successfully",
+          description: "QR code uploaded. Processing...",
         });
       }
     };
@@ -127,11 +171,40 @@ export function ConnectPatientContent() {
   };
 
   const handleOpenCamera = () => {
-    // This would open camera for QR code scanning
-    toast({
-      title: "Info",
-      description: "Camera QR scanner will be available in the mobile app",
-    });
+    // Check if device has camera access
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(() => {
+          toast({
+            title: "Info",
+            description: "Camera access granted. QR scanner will open in mobile app.",
+          });
+        })
+        .catch(() => {
+          toast({
+            title: "Info",
+            description: "Camera access denied. Please use upload option instead.",
+            variant: "destructive",
+          });
+        });
+    } else {
+      toast({
+        title: "Info",
+        description: "Camera not available on this device",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Generate QR code data
+  const generateQRCode = () => {
+    const qrData = {
+      type: 'doctor-connect',
+      doctorId: user?._id,
+      doctorName: `${user?.firstName} ${user?.lastName}`,
+      timestamp: Date.now()
+    };
+    return btoa(JSON.stringify(qrData));
   };
 
   return (
@@ -152,12 +225,17 @@ export function ConnectPatientContent() {
                 </div>
               </div>
 
-              {/* Chat bubbles */}
+              {/* DOKTOR app preview */}
               <div className="p-2 space-y-2">
-                <div className="w-8 h-8 bg-blue-500 rounded-full"></div>
-                <div className="w-12 h-3 bg-gray-200 rounded-full ml-auto"></div>
-                <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-                <div className="w-10 h-3 bg-blue-200 rounded-full ml-auto"></div>
+                <div className="text-center">
+                  <div className="w-6 h-6 bg-blue-500 rounded-lg mx-auto mb-1"></div>
+                  <div className="text-xs font-bold text-blue-600">DOKTOR</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="w-full h-2 bg-blue-100 rounded"></div>
+                  <div className="w-3/4 h-2 bg-pink-100 rounded"></div>
+                  <div className="w-full h-2 bg-green-100 rounded"></div>
+                </div>
               </div>
             </div>
 
@@ -219,25 +297,43 @@ export function ConnectPatientContent() {
               Connect by QR Code
             </h3>
 
-            {/* QR Code - Using dummy image */}
+            {/* QR Code - Generate dynamic QR code */}
             <div className="flex justify-center">
               <div className="w-48 h-48 bg-white border-2 border-gray-200 rounded-2xl p-4 flex items-center justify-center">
-                <img
-                  src="https://images.pexels.com/photos/8566473/pexels-photo-8566473.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop"
-                  alt="QR Code"
-                  className="w-full h-full object-cover rounded-lg"
-                />
+                <div className="text-center">
+                  <div className="w-32 h-32 bg-gray-100 rounded-lg mb-2 flex items-center justify-center relative">
+                    {/* Simple QR code pattern */}
+                    <div className="grid grid-cols-8 gap-1">
+                      {Array.from({ length: 64 }, (_, i) => {
+                        // Create a pattern based on doctor ID and index
+                        const pattern = (user?._id?.charCodeAt(i % (user._id.length || 1)) || 0) + i;
+                        return (
+                          <div
+                            key={i}
+                            className={`w-1 h-1 ${
+                              pattern % 2 === 0 ? 'bg-black' : 'bg-white'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <QrCode className="w-8 h-8 text-blue-500 opacity-50" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">Doctor QR Code</p>
+                </div>
               </div>
             </div>
 
             {/* QR Code Buttons */}
             <div className="flex space-x-4">
               <Button
-                onClick={handleUploadHeader}
+                onClick={handleUploadQR}
                 className="flex-1 bg-blue-500 hover:bg-blue-600 text-white h-12 rounded-xl flex items-center justify-center space-x-2"
               >
                 <Upload className="w-4 h-4" />
-                <span>Upload header</span>
+                <span>Upload QR Code</span>
               </Button>
               <Button
                 onClick={handleOpenCamera}
@@ -325,6 +421,19 @@ export function ConnectPatientContent() {
               <Share2 className="w-4 h-4" />
               <span>Share my link</span>
             </Button>
+          </div>
+
+          {/* QR Code Info */}
+          <div className="bg-blue-50 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-blue-900 mb-2">Your Doctor Code</h4>
+            <p className="text-xs text-blue-700 mb-2">
+              Share this code with patients to connect:
+            </p>
+            <div className="bg-white rounded-lg p-2 text-center">
+              <span className="font-mono text-lg font-bold text-gray-900">
+                {user?._id?.slice(-8).toUpperCase() || 'DOC12345'}
+              </span>
+            </div>
           </div>
         </div>
       </div>

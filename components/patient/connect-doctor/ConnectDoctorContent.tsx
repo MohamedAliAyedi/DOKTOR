@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { doctorsAPI } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Upload, Camera, Share2, Phone, Mail } from "lucide-react";
+import { X, Upload, Camera, Share2, Phone, Mail, QrCode } from "lucide-react";
 
 export function ConnectDoctorContent() {
+  const { user } = useAuth();
   const [doctorId, setDoctorId] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
@@ -57,11 +59,31 @@ export function ConnectDoctorContent() {
       return;
     }
 
-    // This would typically send an SMS invitation
-    toast({
-      title: "Success",
-      description: "Phone invitation sent successfully",
-    });
+    try {
+      const inviteData = {
+        type: 'patient-invite',
+        phoneNumber: phoneNumber,
+        patientId: user?._id,
+        patientName: `${user?.firstName} ${user?.lastName}`
+      };
+      
+      const inviteLink = `${window.location.origin}/doctor/connect-patient?invite=${btoa(JSON.stringify(inviteData))}`;
+      
+      navigator.clipboard.writeText(`${user?.firstName} ${user?.lastName} wants to connect with you on DOKTOR: ${inviteLink}`);
+      
+      toast({
+        title: "Success",
+        description: "Invitation link copied to clipboard. Send this via SMS.",
+      });
+      
+      setPhoneNumber("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create invitation",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSendEmailInvitation = async () => {
@@ -74,20 +96,47 @@ export function ConnectDoctorContent() {
       return;
     }
 
-    // This would typically send an email invitation
-    toast({
-      title: "Success",
-      description: "Email invitation sent successfully",
-    });
+    try {
+      const inviteData = {
+        type: 'patient-invite',
+        email: email,
+        patientId: user?._id,
+        patientName: `${user?.firstName} ${user?.lastName}`
+      };
+      
+      const inviteLink = `${window.location.origin}/doctor/connect-patient?invite=${btoa(JSON.stringify(inviteData))}`;
+      
+      navigator.clipboard.writeText(`${user?.firstName} ${user?.lastName} wants to connect with you on DOKTOR: ${inviteLink}`);
+      
+      toast({
+        title: "Success",
+        description: "Invitation link copied to clipboard. Send this via email.",
+      });
+      
+      setEmail("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create invitation",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleShareLink = () => {
-    const shareUrl = `${window.location.origin}/connect-patient?ref=${btoa(JSON.stringify({ type: 'patient' }))}`;
+    const shareData = {
+      type: 'patient-invite',
+      patientId: user?._id,
+      patientName: `${user?.firstName} ${user?.lastName}`,
+      timestamp: Date.now()
+    };
+    
+    const shareUrl = `${window.location.origin}/doctor/connect-patient?invite=${btoa(JSON.stringify(shareData))}`;
     
     if (navigator.share) {
       navigator.share({
         title: 'Connect with me on DOKTOR',
-        text: 'Join me on DOKTOR for better healthcare management',
+        text: `${user?.firstName} ${user?.lastName} wants to connect with you on DOKTOR for better healthcare management`,
         url: shareUrl
       });
     } else {
@@ -213,11 +262,28 @@ export function ConnectDoctorContent() {
             {/* QR Code - Using dummy image */}
             <div className="flex justify-center">
               <div className="w-48 h-48 bg-white border-2 border-gray-200 rounded-2xl p-4 flex items-center justify-center">
-                <img
-                  src="https://images.pexels.com/photos/8566473/pexels-photo-8566473.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop"
-                  alt="QR Code"
-                  className="w-full h-full object-cover rounded-lg"
-                />
+                <div className="text-center">
+                  <div className="w-32 h-32 bg-gray-100 rounded-lg mb-2 flex items-center justify-center relative">
+                    {/* Simple QR code pattern */}
+                    <div className="grid grid-cols-8 gap-1">
+                      {Array.from({ length: 64 }, (_, i) => {
+                        const pattern = (user?._id?.charCodeAt(i % (user._id.length || 1)) || 0) + i;
+                        return (
+                          <div
+                            key={i}
+                            className={`w-1 h-1 ${
+                              pattern % 2 === 0 ? 'bg-black' : 'bg-white'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <QrCode className="w-8 h-8 text-blue-500 opacity-50" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">Patient QR Code</p>
+                </div>
               </div>
             </div>
 
@@ -316,6 +382,19 @@ export function ConnectDoctorContent() {
               <Share2 className="w-4 h-4" />
               <span>Share my link</span>
             </Button>
+          </div>
+
+          {/* Patient Code Info */}
+          <div className="bg-blue-50 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-blue-900 mb-2">Your Patient Code</h4>
+            <p className="text-xs text-blue-700 mb-2">
+              Share this code with doctors to connect:
+            </p>
+            <div className="bg-white rounded-lg p-2 text-center">
+              <span className="font-mono text-lg font-bold text-gray-900">
+                {user?._id?.slice(-8).toUpperCase() || 'PAT12345'}
+              </span>
+            </div>
           </div>
         </div>
       </div>

@@ -30,7 +30,7 @@ interface NewPatientModalProps {
 
 export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
     lastName: "",
     age: "",
     gender: "",
@@ -41,6 +41,10 @@ export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
     diagnosis: "",
     email: "",
     password: "",
+    dateOfBirth: "",
+    bloodType: "",
+    height: "",
+    weight: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -50,7 +54,7 @@ export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
   };
 
   const handleSubmit = async () => {
-    if (!formData.fullName || !formData.lastName || !formData.age || !formData.gender || !formData.phoneNumber || !formData.email) {
+    if (!formData.firstName || !formData.lastName || !formData.age || !formData.gender || !formData.phoneNumber || !formData.email) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -63,7 +67,7 @@ export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
     try {
       // Create user account first
       await authAPI.register({
-        firstName: formData.fullName,
+        firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
@@ -90,7 +94,7 @@ export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
 
   const handleCancel = () => {
     setFormData({
-      fullName: "",
+      firstName: "",
       lastName: "",
       age: "",
       gender: "",
@@ -101,6 +105,10 @@ export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
       diagnosis: "",
       email: "",
       password: "",
+      dateOfBirth: "",
+      bloodType: "",
+      height: "",
+      weight: "",
     });
     onClose();
   };
@@ -135,17 +143,17 @@ export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
 
           {/* Form */}
           <div className="space-y-6">
-            {/* Row 1: Full name and Last name */}
+            {/* Row 1: First name and Last name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm text-blue-600 font-medium">
-                  Full name <span className="text-red-500">*</span>
+                  First name <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  placeholder="Full name"
-                  value={formData.fullName}
+                  placeholder="First name"
+                  value={formData.firstName}
                   onChange={(e) =>
-                    handleInputChange("fullName", e.target.value)
+                    handleInputChange("firstName", e.target.value)
                   }
                   className="h-12 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                 />
@@ -197,13 +205,14 @@ export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
               </div>
             </div>
 
-            {/* Row 2: Age and Gender */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Row 2: Age, Gender, Date of Birth */}
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm text-blue-600 font-medium">
                   Age <span className="text-red-500">*</span>
                 </Label>
                 <Input
+                  type="number"
                   placeholder="Age"
                   value={formData.age}
                   onChange={(e) => handleInputChange("age", e.target.value)}
@@ -224,36 +233,69 @@ export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
                   <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
                     <SelectItem value="male">Male</SelectItem>
                     <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Row 3: Job title and Insurance information */}
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm text-blue-600 font-medium">
-                  Job title <span className="text-red-500">*</span>
+                  Date of Birth
                 </Label>
                 <Input
-                  placeholder="Job title"
-                  value={formData.jobTitle}
-                  onChange={(e) =>
-                    handleInputChange("jobTitle", e.target.value)
-                  }
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+                  className="h-12 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                />
+              </div>
+            </div>
+
+            {/* Row 3: Blood Type, Height, Weight */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm text-blue-600 font-medium">
+                  Blood Type
+                </Label>
+                <Select
+                  value={formData.bloodType}
+                  onValueChange={(value) => handleInputChange("bloodType", value)}
+                >
+                  <SelectTrigger className="h-12 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200">
+                    <SelectValue placeholder="Blood Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A+">A+</SelectItem>
+                    <SelectItem value="A-">A-</SelectItem>
+                    <SelectItem value="B+">B+</SelectItem>
+                    <SelectItem value="B-">B-</SelectItem>
+                    <SelectItem value="AB+">AB+</SelectItem>
+                    <SelectItem value="AB-">AB-</SelectItem>
+                    <SelectItem value="O+">O+</SelectItem>
+                    <SelectItem value="O-">O-</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-blue-600 font-medium">
+                  Height (cm)
+                </Label>
+                <Input
+                  type="number"
+                  placeholder="Height"
+                  value={formData.height}
+                  onChange={(e) => handleInputChange("height", e.target.value)}
                   className="h-12 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm text-blue-600 font-medium">
-                  Insurance information <span className="text-red-500">*</span>
+                  Weight (kg)
                 </Label>
                 <Input
-                  placeholder="Insurance information"
-                  value={formData.insuranceInfo}
-                  onChange={(e) =>
-                    handleInputChange("insuranceInfo", e.target.value)
-                  }
+                  type="number"
+                  placeholder="Weight"
+                  value={formData.weight}
+                  onChange={(e) => handleInputChange("weight", e.target.value)}
                   className="h-12 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                 />
               </div>
@@ -276,7 +318,7 @@ export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm text-blue-600 font-medium">
-                  Emergency phone number <span className="text-red-500">*</span>
+                  Emergency phone number
                 </Label>
                 <Input
                   placeholder="Emergency phone number"
@@ -289,13 +331,43 @@ export function NewPatientModal({ isOpen, onClose }: NewPatientModalProps) {
               </div>
             </div>
 
-            {/* Row 5: Diagnosis */}
+            {/* Row 5: Job title and Insurance information */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm text-blue-600 font-medium">
+                  Job title
+                </Label>
+                <Input
+                  placeholder="Job title"
+                  value={formData.jobTitle}
+                  onChange={(e) =>
+                    handleInputChange("jobTitle", e.target.value)
+                  }
+                  className="h-12 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-blue-600 font-medium">
+                  Insurance information
+                </Label>
+                <Input
+                  placeholder="Insurance information"
+                  value={formData.insuranceInfo}
+                  onChange={(e) =>
+                    handleInputChange("insuranceInfo", e.target.value)
+                  }
+                  className="h-12 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                />
+              </div>
+            </div>
+
+            {/* Row 6: Diagnosis */}
             <div className="space-y-2">
               <Label className="text-sm text-blue-600 font-medium">
-                Diagnosis
+                Initial Diagnosis/Notes
               </Label>
               <Textarea
-                placeholder="Diagnosis"
+                placeholder="Initial diagnosis or medical notes"
                 value={formData.diagnosis}
                 onChange={(e) => handleInputChange("diagnosis", e.target.value)}
                 className="min-h-[80px] border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none"

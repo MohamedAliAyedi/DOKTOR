@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { doctorsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +12,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AddUnavailabilityModalProps {
   isOpen: boolean;
@@ -25,16 +36,50 @@ export function AddUnavailabilityModal({
   const [toDate, setToDate] = useState("");
   const [fromTime, setFromTime] = useState("");
   const [toTime, setToTime] = useState("");
+  const [reason, setReason] = useState("");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringPattern, setRecurringPattern] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleConfirm = () => {
-    console.log("Adding unavailability:", {
-      fromDate,
-      toDate,
-      fromTime,
-      toTime,
-    });
-    // Handle the unavailability creation logic here
-    onClose();
+  const handleConfirm = async () => {
+    if (!fromDate || !toDate || !fromTime || !toTime || !reason) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await doctorsAPI.addUnavailability({
+        startDate: fromDate,
+        endDate: toDate,
+        startTime: fromTime,
+        endTime: toTime,
+        reason,
+        isRecurring,
+        recurringPattern: isRecurring ? recurringPattern : undefined,
+      });
+
+      toast({
+        title: "Success",
+        description: "Unavailability period added successfully",
+      });
+
+      handleCancel();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description:
+          error.response?.data?.message || "Failed to add unavailability",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -43,6 +88,9 @@ export function AddUnavailabilityModal({
     setToDate("");
     setFromTime("");
     setToTime("");
+    setReason("");
+    setIsRecurring(false);
+    setRecurringPattern("");
     onClose();
   };
 
@@ -70,61 +118,108 @@ export function AddUnavailabilityModal({
               {/* From Date */}
               <div className="space-y-2">
                 <Label className="text-sm text-gray-600 font-medium">
-                  From
-                </Label>
-                <div className="relative">
-                  <Input
-                    placeholder="DD/MM/YYYY"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200 pr-12"
-                  />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                </div>
-              </div>
-
-              {/* From Time */}
-              <div className="space-y-2">
-                <Label className="text-sm text-gray-600 font-medium">
-                  Time
+                  From Date <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  placeholder="From ( e.g. 9:00 AM)"
-                  value={fromTime}
-                  onChange={(e) => setFromTime(e.target.value)}
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                />
+              </div>
+
+              {/* To Date */}
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-600 font-medium">
+                  To Date <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
                   className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                 />
               </div>
             </div>
 
-            {/* To Date and Time Row */}
+            {/* Time Range Row */}
             <div className="grid grid-cols-2 gap-4">
-              {/* To Date */}
+              {/* From Time */}
               <div className="space-y-2">
-                <Label className="text-sm text-gray-600 font-medium">To</Label>
-                <div className="relative">
-                  <Input
-                    placeholder="DD/MM/YYYY"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200 pr-12"
-                  />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                </div>
+                <Label className="text-sm text-gray-600 font-medium">
+                  From Time <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="time"
+                  value={fromTime}
+                  onChange={(e) => setFromTime(e.target.value)}
+                  className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                />
               </div>
 
               {/* To Time */}
               <div className="space-y-2">
                 <Label className="text-sm text-gray-600 font-medium">
-                  Time
+                  To Time <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  placeholder="From ( e.g. 9:00 AM)"
+                  type="time"
                   value={toTime}
                   onChange={(e) => setToTime(e.target.value)}
                   className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                 />
               </div>
+            </div>
+
+            {/* Reason */}
+            <div className="space-y-2">
+              <Label className="text-sm text-gray-600 font-medium">
+                Reason <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                placeholder="Enter reason for unavailability"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="min-h-[80px] border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none"
+              />
+            </div>
+
+            {/* Recurring Options */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  checked={isRecurring}
+                  onCheckedChange={(checked) =>
+                    setIsRecurring(checked as boolean)
+                  }
+                  className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                />
+                <Label className="text-sm text-gray-700">
+                  Make this recurring
+                </Label>
+              </div>
+
+              {isRecurring && (
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-600 font-medium">
+                    Recurring Pattern
+                  </Label>
+                  <Select
+                    value={recurringPattern}
+                    onValueChange={setRecurringPattern}
+                  >
+                    <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200">
+                      <SelectValue placeholder="Select pattern" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -139,8 +234,9 @@ export function AddUnavailabilityModal({
               <Button
                 onClick={handleConfirm}
                 className="px-8 py-3 h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-medium"
+                disabled={isLoading}
               >
-                Confirm unavailability
+                {isLoading ? "Adding..." : "Confirm unavailability"}
               </Button>
             </div>
           </div>

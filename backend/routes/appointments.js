@@ -22,8 +22,8 @@ const createAppointmentValidation = [
     ])
     .withMessage("Invalid appointment type"),
   body("scheduledDate")
-    .matches(/^\d{2}\/\d{2}\/\d{4}$/)
-    .withMessage("scheduledDate must be in DD/MM/YYYY format"),
+    .isISO8601()
+    .withMessage("Valid scheduled date is required"),
   body("scheduledTime.start")
     .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
     .withMessage("Valid start time is required (HH:MM format)"),

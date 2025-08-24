@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
+import { medicalRecordsAPI, prescriptionsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,104 +19,6 @@ import {
   X,
 } from "lucide-react";
 
-const recentPrescriptions = [
-  {
-    id: 1,
-    name: "Inj Toradol 30mg",
-    type: "injection",
-    color: "bg-blue-500",
-    notes:
-      "Take medication as prescribed. Do not stop without medical advice. Report any side effects.",
-    beforeBreakfast: true,
-    from: "24/05/2025",
-    to: "31/05/2025",
-    urgency: "urgent",
-  },
-  {
-    id: 2,
-    name: "Inj Morphine 10mg",
-    type: "injection",
-    color: "bg-green-500",
-    notes:
-      "Administer only when pain is severe. Monitor patient closely for respiratory depression.",
-    beforeBreakfast: true,
-    from: "24/05/2025",
-    to: "31/05/2025",
-    urgency: "after-meal",
-  },
-  {
-    id: 3,
-    name: "Inj Fentanyl 50mcg",
-    type: "injection",
-    color: "bg-yellow-500",
-    notes: "For breakthrough pain; use cautiously in opioid-naive patients.",
-    beforeBreakfast: true,
-    from: "24/05/2025",
-    to: "31/05/2025",
-    urgency: "daily",
-  },
-  {
-    id: 4,
-    name: "Inj Ketorolac 30mg",
-    type: "injection",
-    color: "bg-pink-500",
-    notes: "Limit use to 5 days; monitor kidney function during treatment.",
-    beforeBreakfast: true,
-    from: "24/05/2025",
-    to: "31/05/2025",
-    urgency: "take-when-needed",
-  },
-];
-
-const pastPrescriptions = [
-  {
-    id: 5,
-    name: "Inj Toradol 30mg",
-    type: "injection",
-    color: "bg-blue-500",
-    notes:
-      "Take medication as prescribed. Do not stop without medical advice. Report any side effects.",
-    beforeBreakfast: true,
-    from: "24/05/2025",
-    to: "31/05/2025",
-    urgency: "urgent",
-  },
-  {
-    id: 6,
-    name: "Inj Morphine 10mg",
-    type: "injection",
-    color: "bg-green-500",
-    notes:
-      "Administer only when pain is severe. Monitor patient closely for respiratory depression.",
-    beforeBreakfast: true,
-    from: "24/05/2025",
-    to: "31/05/2025",
-    urgency: "after-meal",
-  },
-  {
-    id: 7,
-    name: "Inj Fentanyl 50mcg",
-    type: "injection",
-    color: "bg-yellow-500",
-    notes: "For breakthrough pain; use cautiously in opioid-naive patients.",
-    beforeBreakfast: true,
-    from: "24/05/2025",
-    to: "31/05/2025",
-    urgency: "daily",
-  },
-  {
-    id: 8,
-    name: "Inj Ketorolac 30mg",
-    type: "injection",
-    color: "bg-pink-500",
-    notes: "Limit use to 5 days; monitor kidney function during treatment.",
-    beforeBreakfast: true,
-    from: "24/05/2025",
-    to: "31/05/2025",
-    urgency: "take-when-needed",
-  },
-];
-
 const diagnosticReports = [
   {
     id: 1,
@@ -122,6 +27,7 @@ const diagnosticReports = [
     icon: TestTube,
     bgColor: "bg-gradient-to-br from-red-400 to-yellow-400",
     iconBg: "bg-white/20",
+    route: "/patient/medical-record/blood-list"
   },
   {
     id: 2,
@@ -130,6 +36,7 @@ const diagnosticReports = [
     icon: Stethoscope,
     bgColor: "bg-gradient-to-br from-blue-400 to-cyan-400",
     iconBg: "bg-white/20",
+    route: "/patient/medical-record"
   },
   {
     id: 3,
@@ -138,50 +45,71 @@ const diagnosticReports = [
     icon: FileText,
     bgColor: "bg-gradient-to-br from-green-400 to-teal-400",
     iconBg: "bg-white/20",
+    route: "/patient/medical-record/xray-list"
   },
 ];
 
-const getUrgencyBadge = (urgency: string) => {
-  switch (urgency) {
-    case "urgent":
-      return <div className="w-2 h-2 bg-red-500 rounded-full"></div>;
-    case "after-meal":
-      return <div className="w-2 h-2 bg-green-500 rounded-full"></div>;
-    case "daily":
-      return <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>;
-    case "take-when-needed":
-      return <div className="w-2 h-2 bg-blue-500 rounded-full"></div>;
-    default:
-      return <div className="w-2 h-2 bg-gray-500 rounded-full"></div>;
-  }
-};
-
-const getUrgencyText = (urgency: string) => {
-  switch (urgency) {
-    case "urgent":
-      return "Urgent";
-    case "after-meal":
-      return "After meal";
-    case "daily":
-      return "Daily";
-    case "take-when-needed":
-      return "Take When Needed";
-    default:
-      return urgency;
-  }
-};
-
 export function MedicalRecordContent() {
   const router = useRouter();
-  const [showAllRecent, setShowAllRecent] = useState("all");
-  const [showAllPast, setShowAllPast] = useState("all");
+  const [recentPrescriptions, setRecentPrescriptions] = useState<any[]>([]);
+  const [pastPrescriptions, setPastPrescriptions] = useState<any[]>([]);
+  const [medicalRecords, setMedicalRecords] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  const handleXRayClick = () => {
-    router.push("/medical-record/xray-list/1");
+  useEffect(() => {
+    fetchMedicalData();
+  }, []);
+
+  const fetchMedicalData = async () => {
+    try {
+      const [prescriptionsResponse, recordsResponse] = await Promise.all([
+        prescriptionsAPI.getPrescriptions({ status: 'active' }),
+        medicalRecordsAPI.getMedicalRecords()
+      ]);
+
+      const prescriptions = prescriptionsResponse.data.data.prescriptions;
+      const records = recordsResponse.data.data.records;
+
+      // Separate recent and past prescriptions
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const recent = prescriptions.filter((p: any) => 
+        new Date(p.createdAt) > thirtyDaysAgo
+      );
+      const past = prescriptions.filter((p: any) => 
+        new Date(p.createdAt) <= thirtyDaysAgo
+      );
+
+      setRecentPrescriptions(recent);
+      setPastPrescriptions(past);
+      setMedicalRecords(records);
+    } catch (error) {
+      console.error('Failed to fetch medical data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleBloodTestClick = () => {
-    router.push("/medical-record/blood-list/1");
+  const handleDiagnosticReportClick = (report: any) => {
+    router.push(report.route);
+  };
+
+  const handleAddNewPrescription = () => {
+    // This would open a prescription modal or navigate to prescription creation
+    toast({
+      title: "Info",
+      description: "Prescription creation is available during consultations",
+    });
+  };
+
+  const handleAddNewAnalysis = () => {
+    // This would open an analysis creation modal
+    toast({
+      title: "Info",
+      description: "Analysis requests are available during consultations",
+    });
   };
 
   return (
@@ -193,15 +121,20 @@ export function MedicalRecordContent() {
             Medical record
           </h1>
           <p className="text-gray-600">
-            Mokhtar Amine Ghannouchi{" "}
-            <span className="text-gray-400">#P-00016</span>
+            {recentPrescriptions.length + pastPrescriptions.length} prescriptions • {medicalRecords.length} records
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <Button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+          <Button 
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
+            onClick={handleAddNewPrescription}
+          >
             Add new prescription
           </Button>
-          <Button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2">
+          <Button 
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2"
+            onClick={handleAddNewAnalysis}
+          >
             <span>Add new Analysis</span>
             <FileText className="w-4 h-4" />
           </Button>
@@ -252,15 +185,24 @@ export function MedicalRecordContent() {
 
         {/* Prescription Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {recentPrescriptions.map((prescription) => (
+          {isLoading ? (
+            <div className="col-span-full text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            </div>
+          ) : recentPrescriptions.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-gray-500">
+              No recent prescriptions found
+            </div>
+          ) : (
+            recentPrescriptions.map((prescription) => (
             <div
-              key={prescription.id}
+              key={prescription._id}
               className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
             >
               <div
-                className={`${prescription.color} text-white px-4 py-3 text-base font-medium text-center`}
+                className="bg-blue-500 text-white px-4 py-3 text-base font-medium text-center"
               >
-                {prescription.name}
+                {prescription.medications?.[0]?.name || 'Prescription'}
               </div>
 
               <div className="p-4 space-y-3">
@@ -269,23 +211,24 @@ export function MedicalRecordContent() {
                     Notes:
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed">
-                    {prescription.notes}
+                    {prescription.medications?.[0]?.instructions || 'Take as prescribed'}
                   </p>
                 </div>
                 <hr />
-                {prescription.beforeBreakfast && (
+                {prescription.medications?.[0]?.timing?.beforeBreakfast && (
                   <div className="text-sm text-blue-600 font-medium">
                     Before Breakfast
                   </div>
                 )}
 
                 <div className="space-y-1 text-sm text-gray-600">
-                  <div>From {prescription.from}</div>
-                  <div>To {prescription.to}</div>
+                  <div>From {new Date(prescription.medications?.[0]?.duration?.startDate).toLocaleDateString()}</div>
+                  <div>To {new Date(prescription.medications?.[0]?.duration?.endDate).toLocaleDateString()}</div>
                 </div>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
         {/* Legend */}
@@ -347,15 +290,20 @@ export function MedicalRecordContent() {
 
         {/* Past Prescription Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {pastPrescriptions.map((prescription) => (
+          {pastPrescriptions.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-gray-500">
+              No past prescriptions found
+            </div>
+          ) : (
+            pastPrescriptions.map((prescription) => (
             <div
-              key={prescription.id}
+              key={prescription._id}
               className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
             >
               <div
-                className={`${prescription.color} text-white px-4 py-3 text-base font-medium text-center`}
+                className="bg-gray-500 text-white px-4 py-3 text-base font-medium text-center"
               >
-                {prescription.name}
+                {prescription.medications?.[0]?.name || 'Prescription'}
               </div>
 
               <div className="p-4 space-y-3">
@@ -364,23 +312,24 @@ export function MedicalRecordContent() {
                     Notes:
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed">
-                    {prescription.notes}
+                    {prescription.medications?.[0]?.instructions || 'Take as prescribed'}
                   </p>
                 </div>
 
-                {prescription.beforeBreakfast && (
+                {prescription.medications?.[0]?.timing?.beforeBreakfast && (
                   <div className="text-sm text-blue-600 font-medium">
                     Before Breakfast
                   </div>
                 )}
                 <hr />
                 <div className="space-y-1 text-sm text-gray-600">
-                  <div>From {prescription.from}</div>
-                  <div>To {prescription.to}</div>
+                  <div>From {new Date(prescription.medications?.[0]?.duration?.startDate).toLocaleDateString()}</div>
+                  <div>To {new Date(prescription.medications?.[0]?.duration?.endDate).toLocaleDateString()}</div>
                 </div>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
         {/* Legend */}
@@ -419,14 +368,8 @@ export function MedicalRecordContent() {
           {diagnosticReports.map((report) => (
             <div
               key={report.id}
-              onClick={
-                report.id === 3
-                  ? handleXRayClick
-                  : report.id === 1
-                  ? handleBloodTestClick
-                  : undefined
-              }
-              className={`${report.bgColor} rounded-2xl p-6 text-white relative overflow-hidden`}
+              onClick={() => handleDiagnosticReportClick(report)}
+              className={`${report.bgColor} rounded-2xl p-6 text-white relative overflow-hidden cursor-pointer hover:scale-105 transition-transform`}
             >
               <div className="relative z-10">
                 <div
@@ -438,13 +381,6 @@ export function MedicalRecordContent() {
                 <p className="text-sm text-white/90 mb-4">{report.subtitle}</p>
                 <Button
                   variant="ghost"
-                  onClick={
-                    report.id === 3
-                      ? handleXRayClick
-                      : report.id === 1
-                      ? handleBloodTestClick
-                      : undefined
-                  }
                   className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full p-0 text-white"
                 >
                   <ArrowRight className="w-5 h-5" />

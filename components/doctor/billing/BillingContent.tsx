@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
+import { billingAPI, doctorsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,65 +38,6 @@ ChartJS.register(
   Legend
 );
 
-const billingData = [
-  {
-    id: 1,
-    patient: "Jordy Astows",
-    payment: "TND 50",
-    service: "Visit + X-ray",
-    status: "Paid",
-  },
-  {
-    id: 2,
-    patient: "Alica Onn",
-    payment: "TND 50",
-    service: "Visit",
-    status: "Pending",
-  },
-  {
-    id: 3,
-    patient: "Brigitte Guerra",
-    payment: "TND 50",
-    service: "Visit + X-ray",
-    status: "Paid",
-  },
-  {
-    id: 4,
-    patient: "Laura High",
-    payment: "TND 50",
-    service: "Cancelled",
-    status: "Paid",
-  },
-  {
-    id: 5,
-    patient: "Paca Plaza",
-    payment: "TND 50",
-    service: "Visit + X-ray",
-    status: "Pending",
-  },
-  {
-    id: 6,
-    patient: "Laura High",
-    payment: "TND 50",
-    service: "Visit",
-    status: "Paid",
-  },
-];
-
-const revenueChartData = {
-  labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-  datasets: [
-    {
-      label: "Revenue",
-      data: [20000, 35000, 25000, 45000, 30000, 40000],
-      borderColor: "#3b82f6",
-      backgroundColor: "rgba(59, 130, 246, 0.1)",
-      tension: 0.4,
-      fill: true,
-    },
-  ],
-};
-
 const revenueChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -117,17 +61,6 @@ const revenueChartOptions = {
   },
 };
 
-const totalIncomeData = {
-  labels: ["Visits", "Blood Tests", "X-Ray", "Assurance", "Other"],
-  datasets: [
-    {
-      data: [5000, 3000, 2000, 1500, 950],
-      backgroundColor: ["#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#6b7280"],
-      borderWidth: 0,
-    },
-  ],
-};
-
 const totalIncomeOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -141,16 +74,22 @@ const totalIncomeOptions = {
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case "Paid":
+    case "paid":
       return (
         <Badge className="bg-green-100 text-green-600 hover:bg-green-100 px-3 py-1 rounded-full text-xs font-medium">
           Paid
         </Badge>
       );
-    case "Pending":
+    case "pending":
       return (
         <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-100 px-3 py-1 rounded-full text-xs font-medium">
           Pending
+        </Badge>
+      );
+    case "overdue":
+      return (
+        <Badge className="bg-red-100 text-red-600 hover:bg-red-100 px-3 py-1 rounded-full text-xs font-medium">
+          Overdue
         </Badge>
       );
     default:
@@ -163,15 +102,101 @@ const getStatusBadge = (status: string) => {
 };
 
 export function BillingContent() {
+  const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState("Monthly");
+  const [billingStats, setBillingStats] = useState<any>({});
+  const [recentBills, setRecentBills] = useState<any[]>([]);
+  const [revenueData, setRevenueData] = useState<any>({});
+  const [incomeBreakdown, setIncomeBreakdown] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBillingData();
+  }, [selectedPeriod]);
+
+  const fetchBillingData = async () => {
+    try {
+      const [statsResponse, billsResponse, revenueResponse] = await Promise.all([
+        billingAPI.getBillingStatistics(),
+        billingAPI.getBills({ limit: 10 }),
+        billingAPI.getRevenueReport({ period: selectedPeriod.toLowerCase() })
+      ]);
+
+      setBillingStats(statsResponse.data.data.statistics);
+      setRecentBills(billsResponse.data.data.bills);
+      setRevenueData(revenueResponse.data.data);
+
+      // Process revenue data for charts
+      const revenue = revenueResponse.data.data.revenueData || [];
+      const labels = revenue.map((item: any) => {
+        if (selectedPeriod === 'Monthly') {
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return months[item._id - 1] || `Month ${item._id}`;
+        }
+        return `Period ${item._id}`;
+      });
+      const values = revenue.map((item: any) => item.revenue || 0);
+
+      setRevenueData({
+        labels,
+        datasets: [
+          {
+            label: "Revenue",
+            data: values,
+            borderColor: "#3b82f6",
+            backgroundColor: "rgba(59, 130, 246, 0.1)",
+            tension: 0.4,
+            fill: true,
+          },
+        ],
+      });
+
+      // Income breakdown by service type
+      const breakdown = billsResponse.data.data.bills.reduce((acc: any, bill: any) => {
+        const type = bill.billType || 'other';
+        acc[type] = (acc[type] || 0) + bill.totalAmount;
+        return acc;
+      }, {});
+
+      const breakdownData = {
+        labels: Object.keys(breakdown).map(key => key.charAt(0).toUpperCase() + key.slice(1)),
+        datasets: [
+          {
+            data: Object.values(breakdown),
+            backgroundColor: ["#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#6b7280"],
+            borderWidth: 0,
+          },
+        ],
+      };
+
+      setIncomeBreakdown(breakdownData);
+
+    } catch (error) {
+      console.error('Failed to fetch billing data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch billing data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        {/* <div>
-          <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
-        </div> */}
         <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
           <SelectTrigger className="w-32 border-gray-200 rounded-lg">
             <SelectValue />
@@ -191,7 +216,7 @@ export function BillingContent() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm mb-2">Revenue this month</p>
-              <p className="text-3xl font-bold">DT 5,000</p>
+              <p className="text-3xl font-bold">TND {(billingStats.paidRevenue || 0).toLocaleString()}</p>
               <p className="text-blue-200 text-sm mt-1">+8% from last month</p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -205,9 +230,9 @@ export function BillingContent() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-pink-100 text-sm mb-2">Pending payments</p>
-              <p className="text-3xl font-bold">DT 1,100</p>
+              <p className="text-3xl font-bold">TND {(billingStats.pendingRevenue || 0).toLocaleString()}</p>
               <p className="text-pink-200 text-sm mt-1">
-                12 invoices awaiting payment
+                {billingStats.pendingBills || 0} invoices awaiting payment
               </p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -221,9 +246,9 @@ export function BillingContent() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm mb-2">Paid invoices</p>
-              <p className="text-3xl font-bold">85</p>
+              <p className="text-3xl font-bold">{billingStats.paidBills || 0}</p>
               <p className="text-blue-200 text-sm mt-1">
-                Out of 97 total invoices
+                Out of {billingStats.totalBills || 0} total invoices
               </p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -249,39 +274,39 @@ export function BillingContent() {
 
             {/* Table Rows */}
             <div className="space-y-2">
-              {billingData.map((item) => (
+              {recentBills.map((bill) => (
                 <div
-                  key={item.id}
+                  key={bill._id}
                   className="grid grid-cols-4 gap-4 py-3 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center"
                 >
                   {/* Patient */}
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium">
-                      {item.id}
+                      {bill.patient?.user?.firstName?.[0]}{bill.patient?.user?.lastName?.[0]}
                     </div>
                     <span className="text-sm text-gray-900 font-medium">
-                      {item.patient}
+                      {bill.patient?.user?.firstName} {bill.patient?.user?.lastName}
                     </span>
                   </div>
 
                   {/* Payment */}
-                  <div className="text-sm text-gray-600">{item.payment}</div>
+                  <div className="text-sm text-gray-600">TND {bill.totalAmount}</div>
 
                   {/* Service */}
-                  <div className="text-sm text-gray-600">{item.service}</div>
+                  <div className="text-sm text-gray-600">{bill.billType}</div>
 
                   {/* Status */}
-                  <div>{getStatusBadge(item.status)}</div>
+                  <div>{getStatusBadge(bill.paymentStatus)}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Customer's Assurance */}
+          {/* Customer's Insurance */}
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-gray-50">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
-                Customer&apos;s Assurance
+                Customer&apos;s Insurance
               </h3>
               <Button variant="ghost" size="sm" className="text-gray-400">
                 •••
@@ -355,7 +380,7 @@ export function BillingContent() {
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <h3 className="text-lg font-semibold text-gray-900">Revenue</h3>
               </div>
-              <Select value="Monthly" onValueChange={() => {}}>
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
                 <SelectTrigger className="w-24 h-8 border-gray-200 rounded-lg text-sm">
                   <SelectValue />
                 </SelectTrigger>
@@ -367,12 +392,14 @@ export function BillingContent() {
             </div>
 
             <div className="mb-4">
-              <p className="text-2xl font-bold text-gray-900">TND 43,567.00</p>
+              <p className="text-2xl font-bold text-gray-900">TND {(billingStats.totalRevenue || 0).toLocaleString()}</p>
               <p className="text-sm text-pink-500">+4% from last month</p>
             </div>
 
             <div className="h-32">
-              <Line data={revenueChartData} options={revenueChartOptions} />
+              {revenueData.labels && (
+                <Line data={revenueData} options={revenueChartOptions} />
+              )}
             </div>
           </div>
 
@@ -388,10 +415,12 @@ export function BillingContent() {
             </div>
 
             <div className="relative h-48 mb-4">
-              <Doughnut data={totalIncomeData} options={totalIncomeOptions} />
+              {incomeBreakdown.labels && (
+                <Doughnut data={incomeBreakdown} options={totalIncomeOptions} />
+              )}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
-                  <p className="text-xl font-bold text-gray-900">TND 12,450</p>
+                  <p className="text-xl font-bold text-gray-900">TND {(billingStats.totalRevenue || 0).toLocaleString()}</p>
                   <p className="text-sm text-pink-500">
                     +2.1% from last quarter
                   </p>
@@ -400,41 +429,18 @@ export function BillingContent() {
             </div>
 
             <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span>Visits</span>
+              {incomeBreakdown.labels?.map((label: string, index: number) => (
+                <div key={label} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: incomeBreakdown.datasets[0].backgroundColor[index] }}
+                    ></div>
+                    <span>{label}</span>
+                  </div>
+                  <span>TND {incomeBreakdown.datasets[0].data[index]}</span>
                 </div>
-                <span>TND 5000</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span>Blood Tests</span>
-                </div>
-                <span>TND 3000</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                  <span>X-Ray</span>
-                </div>
-                <span>TND 2000</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span>Assurance</span>
-                </div>
-                <span>TND 1500</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                  <span>Other</span>
-                </div>
-                <span>TND 950</span>
-              </div>
+              ))}
             </div>
           </div>
         </div>

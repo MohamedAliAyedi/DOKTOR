@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useEffect } from "react";
+import { useParams } from "next/navigation";
+import { consultationsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -21,12 +25,13 @@ import {
 } from "lucide-react";
 
 export function ConsultationReportContent() {
+  const params = useParams();
+  const { toast } = useToast();
+  const [consultation, setConsultation] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [reportContent, setReportContent] =
-    useState(`You don't need to have a full time ecommerce business to earn a little extra money through your website. You don't even need to be there all the time. All you need to do is wait for the day your advertisers will pay you.
-
-However, this is not as easy as it seems. You can't expect to just make a website and watch the money roll in. You have to exert first the effort to make the site popular and produce a huge traffic flow. Advertisers would only post their banners and ads on sites where they know there are many people who will see them. The more traffic and visitors you have the likely the chance that advertisers will want their ads on your site. You can also have pay-per-click advertising in your site. As each visitor clicks on an ad, the advertiser will pay you for those redirects. Google's Adsense and Yahoo's Search marketing are some of those that offer this performance based marketing strategies.
-
-They can provide a way to make money online by simply placing ads on your site. These ads are also links to the sites of the advertisers. The advertisers pay Google and Yahoo for every clicks done to their links and in return you get paid by these search engines if those clicks were done on your site. The best way to make a better profit is to ensure that there are lots of people who will click on those links. Make sure that your site gets many visitors by making your site informative as well as entertaining. Your site must concentrate on a certain niche so that you can laser-target your market.`);
+    useState('');
 
   const [formatting, setFormatting] = useState({
     bold: false,
@@ -37,6 +42,65 @@ They can provide a way to make money online by simply placing ads on your site. 
   });
 
   const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (params.id) {
+      fetchConsultation();
+    }
+  }, [params.id]);
+
+  const fetchConsultation = async () => {
+    try {
+      const response = await consultationsAPI.getConsultationById(params.id as string);
+      const consultationData = response.data.data.consultation;
+      setConsultation(consultationData);
+      
+      // Generate initial report content
+      const initialReport = generateInitialReport(consultationData);
+      setReportContent(initialReport);
+    } catch (error) {
+      console.error('Failed to fetch consultation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load consultation data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateInitialReport = (consultation: any) => {
+    const patient = consultation.patient;
+    const doctor = consultation.doctor;
+    
+    return `
+      <h2>Consultation Report</h2>
+      <p><strong>Patient:</strong> ${patient?.user?.firstName} ${patient?.user?.lastName}</p>
+      <p><strong>Date:</strong> ${new Date(consultation.startTime).toLocaleDateString()}</p>
+      <p><strong>Doctor:</strong> Dr. ${doctor?.user?.firstName} ${doctor?.user?.lastName}</p>
+      
+      <h3>Chief Complaint</h3>
+      <p>${consultation.chiefComplaint || 'Not specified'}</p>
+      
+      <h3>Symptoms</h3>
+      <ul>
+        ${consultation.symptoms?.map((s: any) => `<li>${s.name}</li>`).join('') || '<li>No symptoms recorded</li>'}
+      </ul>
+      
+      <h3>Physical Examination</h3>
+      <p>${consultation.physicalExamination?.general || 'Physical examination pending...'}</p>
+      
+      <h3>Diagnosis</h3>
+      <p>${consultation.diagnosis?.primary?.description || 'Diagnosis pending...'}</p>
+      
+      <h3>Treatment Plan</h3>
+      <p>${consultation.treatmentPlan?.immediate || 'Treatment plan to be determined...'}</p>
+      
+      <h3>Follow-up Instructions</h3>
+      <p>${consultation.followUpInstructions?.nextAppointment?.reason || 'Follow-up as needed.'}</p>
+    `;
+  };
 
   // Function to apply formatting to selected text
   const applyFormat = useCallback((format: string, value: string | boolean) => {
@@ -130,6 +194,51 @@ They can provide a way to make money online by simply placing ads on your site. 
     input.click();
   }, []);
 
+  const handleSaveReport = async () => {
+    if (!consultation) return;
+
+    setIsSaving(true);
+    try {
+      await consultationsAPI.updateConsultation(consultation._id, {
+        treatmentPlan: {
+          ...consultation.treatmentPlan,
+          immediate: reportContent
+        }
+      });
+
+      toast({
+        title: "Success",
+        description: "Report saved successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to save report",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!consultation) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Consultation not found</p>
+      </div>
+    );
+  }
+
+  const patient = consultation.patient;
+
   return (
     <div className="space-y-6">
       {/* Patient Info Header */}
@@ -137,20 +246,22 @@ They can provide a way to make money online by simply placing ads on your site. 
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Avatar className="w-20 h-20">
-              <AvatarImage src="https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop&crop=face" />
-              <AvatarFallback>MA</AvatarFallback>
+              <AvatarImage src={patient?.user?.avatar} />
+              <AvatarFallback>
+                {patient?.user?.firstName?.[0]}{patient?.user?.lastName?.[0]}
+              </AvatarFallback>
             </Avatar>
             <div>
               <h2 className="text-xl font-bold text-gray-900">
-                Mokhtar Amine Ghannouchi
+                {patient?.user?.firstName} {patient?.user?.lastName}
               </h2>
-              <p className="text-gray-500 text-sm">#P-00016</p>
+              <p className="text-gray-500 text-sm">#{patient?.patientId}</p>
               <div className="flex items-center space-x-2 mt-2">
                 <Badge className="bg-pink-500 hover:bg-pink-500 text-white px-3 py-1 rounded-full text-xs">
-                  ♂ Male
+                  {patient?.gender === 'male' ? '♂ Male' : patient?.gender === 'female' ? '♀ Female' : '⚧ Other'}
                 </Badge>
                 <Badge className="bg-pink-500 hover:bg-pink-500 text-white px-3 py-1 rounded-full text-xs">
-                  23 years
+                  {patient?.age || 'N/A'} years
                 </Badge>
               </div>
             </div>
@@ -332,6 +443,11 @@ They can provide a way to make money online by simply placing ads on your site. 
 
         {/* Editor Content */}
         <div className="p-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
           <div
             ref={editorRef}
             className="min-h-[400px] text-gray-700 leading-relaxed text-sm focus:outline-none"
@@ -340,6 +456,7 @@ They can provide a way to make money online by simply placing ads on your site. 
             onInput={handleContentChange}
             dangerouslySetInnerHTML={{ __html: reportContent }}
           />
+          )}
         </div>
       </div>
 
@@ -348,17 +465,16 @@ They can provide a way to make money online by simply placing ads on your site. 
         <Button
           variant="outline"
           className="bg-white border-gray-200 hover:bg-gray-50 rounded-lg px-8 py-3"
+          onClick={() => router.back()}
         >
           Back to edit
         </Button>
         <Button
           className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg"
-          onClick={() => {
-            console.log("Report content:", reportContent);
-            alert("Report saved successfully!");
-          }}
+          onClick={handleSaveReport}
+          disabled={isSaving}
         >
-          Save Report
+          {isSaving ? "Saving..." : "Save Report"}
         </Button>
       </div>
     </div>

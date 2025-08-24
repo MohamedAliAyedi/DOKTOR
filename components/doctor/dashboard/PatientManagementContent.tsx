@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useEffect } from "react";
-import { appointmentsAPI } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { appointmentsAPI, doctorsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Search, ChevronDown, Calendar, Users, Heart } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -10,28 +9,43 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case "Waiting":
+    case "scheduled":
+    case "waiting":
       return (
         <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-100 px-3 py-1 rounded-full text-xs font-medium">
-          Waiting
+          Scheduled
         </Badge>
       );
-    case "Booked":
+    case "confirmed":
+    case "booked":
       return (
         <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded-full text-xs font-medium">
-          Booked
+          Confirmed
         </Badge>
       );
-    case "In consultation":
+    case "in-progress":
       return (
         <Badge className="bg-purple-100 text-purple-600 hover:bg-purple-100 px-3 py-1 rounded-full text-xs font-medium">
           In consultation
         </Badge>
       );
-    case "Cancelled":
+    case "completed":
+      return (
+        <Badge className="bg-green-100 text-green-600 hover:bg-green-100 px-3 py-1 rounded-full text-xs font-medium">
+          Completed
+        </Badge>
+      );
+    case "cancelled":
       return (
         <Badge className="bg-red-100 text-red-600 hover:bg-red-100 px-3 py-1 rounded-full text-xs font-medium">
           Cancelled
@@ -48,16 +62,17 @@ const getStatusBadge = (status: string) => {
 
 const getPaymentBadge = (status: string) => {
   switch (status) {
-    case "Paid":
+    case "paid":
       return (
         <Badge className="bg-green-100 text-green-600 hover:bg-green-100 px-3 py-1 rounded-full text-xs font-medium">
           Paid
         </Badge>
       );
-    case "Unpaid":
+    case "pending":
+    case "unpaid":
       return (
         <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-100 px-3 py-1 rounded-full text-xs font-medium">
-          Unpaid
+          Pending
         </Badge>
       );
     default:
@@ -68,22 +83,32 @@ const getPaymentBadge = (status: string) => {
       );
   }
 };
+
 export function PatientManagementContent() {
   const router = useRouter();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [ageFilter, setAgeFilter] = useState("all");
+  const [genderFilter, setGenderFilter] = useState("all");
+  const [stats, setStats] = useState({
+    recovered: 0,
+    scheduled: 0,
+    totalPatients: 0
+  });
   const { toast } = useToast();
 
   useEffect(() => {
     fetchTodayAppointments();
+    fetchStats();
   }, []);
 
   const fetchTodayAppointments = async () => {
     try {
       const today = new Date();
-      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
       
       const response = await appointmentsAPI.getAppointments({
         startDate: startOfDay.toISOString(),
@@ -93,14 +118,50 @@ export function PatientManagementContent() {
       setAppointments(response.data.data.appointments);
     } catch (error) {
       console.error('Failed to fetch today\'s appointments:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch today's appointments",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePatientClick = (id: number) => {
-    router.push(`/doctor/consultation/${id}`);
+  const fetchStats = async () => {
+    try {
+      const [appointmentStats, doctorStats] = await Promise.all([
+        appointmentsAPI.getAppointmentStatistics(),
+        doctorsAPI.getDoctorStatistics()
+      ]);
+      
+      const appointmentData = appointmentStats.data.data.statistics;
+      const doctorData = doctorStats.data.data.statistics;
+      
+      setStats({
+        recovered: appointmentData.completedAppointments || 0,
+        scheduled: appointmentData.totalAppointments - (appointmentData.completedAppointments || 0),
+        totalPatients: doctorData.totalPatients || 0
+      });
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
   };
+
+  const handlePatientClick = (appointmentId: string) => {
+    router.push(`/doctor/consultation/${appointmentId}`);
+  };
+
+  const filteredAppointments = appointments.filter(appointment => {
+    const matchesSearch = !searchTerm || 
+      appointment.patient?.user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.patient?.user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.reason?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || appointment.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6">
@@ -117,7 +178,7 @@ export function PatientManagementContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-100 text-sm mb-2">Recovered</p>
-                <p className="text-4xl font-bold">35</p>
+                <p className="text-4xl font-bold">{stats.recovered}</p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                 <Heart className="w-6 h-6 text-white" />
@@ -130,7 +191,7 @@ export function PatientManagementContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-blue-100 text-sm mb-2">Scheduled</p>
-                <p className="text-4xl font-bold">15</p>
+                <p className="text-4xl font-bold">{stats.scheduled}</p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-white" />
@@ -143,7 +204,7 @@ export function PatientManagementContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-pink-100 text-sm mb-2">Total Patient</p>
-                <p className="text-4xl font-bold">250</p>
+                <p className="text-4xl font-bold">{stats.totalPatients}</p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                 <Users className="w-6 h-6 text-white" />
@@ -169,34 +230,43 @@ export function PatientManagementContent() {
 
           {/* Filter Buttons */}
           <div className="flex items-center space-x-4">
-            <Button
-              variant="outline"
-              className="flex items-center space-x-2 bg-white border-gray-200 hover:bg-gray-50 rounded-lg px-4 py-2"
-            >
-              <span className="text-sm">Reason</span>
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="flex items-center space-x-2 bg-white border-gray-200 hover:bg-gray-50 rounded-lg px-4 py-2"
-            >
-              <span className="text-sm">Age</span>
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="flex items-center space-x-2 bg-white border-gray-200 hover:bg-gray-50 rounded-lg px-4 py-2"
-            >
-              <span className="text-sm">Gender</span>
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="flex items-center space-x-2 bg-white border-gray-200 hover:bg-gray-50 rounded-lg px-4 py-2"
-            >
-              <span className="text-sm">Table view</span>
-              <ChevronDown className="w-4 h-4" />
-            </Button>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-32 h-10 border-gray-200 rounded-lg text-sm">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="in-progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={ageFilter} onValueChange={setAgeFilter}>
+              <SelectTrigger className="w-24 h-10 border-gray-200 rounded-lg text-sm">
+                <SelectValue placeholder="Age" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Ages</SelectItem>
+                <SelectItem value="0-18">0-18</SelectItem>
+                <SelectItem value="19-35">19-35</SelectItem>
+                <SelectItem value="36-60">36-60</SelectItem>
+                <SelectItem value="60+">60+</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={genderFilter} onValueChange={setGenderFilter}>
+              <SelectTrigger className="w-28 h-10 border-gray-200 rounded-lg text-sm">
+                <SelectValue placeholder="Gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genders</SelectItem>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -217,19 +287,12 @@ export function PatientManagementContent() {
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             </div>
-          ) : appointments.length === 0 ? (
+          ) : filteredAppointments.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No appointments for today
             </div>
           ) : (
-            appointments
-              .filter(apt => 
-                !searchTerm || 
-                apt.patient?.user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                apt.patient?.user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                apt.reason?.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-              .map((appointment) => (
+            filteredAppointments.map((appointment) => (
             <div
               key={appointment._id}
               onClick={() => handlePatientClick(appointment._id)}
@@ -263,8 +326,8 @@ export function PatientManagementContent() {
 
               {/* Last Visit */}
               <div className="text-sm text-gray-600">
-                {appointment.patient?.lastVisit ? 
-                  new Date(appointment.patient.lastVisit).toLocaleDateString() : 
+                {appointment.updatedAt ? 
+                  new Date(appointment.updatedAt).toLocaleDateString() : 
                   'First visit'
                 }
               </div>
@@ -276,7 +339,7 @@ export function PatientManagementContent() {
               <div>{getStatusBadge(appointment.status)}</div>
 
               {/* Payment Status */}
-              <div>{getPaymentBadge(appointment.billing ? "Paid" : "Unpaid")}</div>
+              <div>{getPaymentBadge(appointment.billing ? "paid" : "pending")}</div>
             </div>
           ))
           )}

@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -10,10 +14,47 @@ import {
 } from "@/components/ui/select";
 
 export function GeneralSettings() {
+  const { user, updateProfile } = useAuth();
+  const { toast } = useToast();
   const [language, setLanguage] = useState("English (USA)");
-  const [timezone, setTimezone] = useState("UCT +00:00");
-  const [dateFormat, setDateFormat] = useState("mm/dd/yyyy");
-  const [timeFormat, setTimeFormat] = useState("12 hours");
+  const [timezone, setTimezone] = useState("UCT +01:00");
+  const [dateFormat, setDateFormat] = useState("dd/mm/yyyy");
+  const [timeFormat, setTimeFormat] = useState("24 hours");
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.preferences) {
+      setLanguage(user.preferences.language || "English (USA)");
+      setTimezone(user.preferences.timezone || "UCT +01:00");
+    }
+  }, [user]);
+
+  const handleSaveChanges = async () => {
+    setIsLoading(true);
+    try {
+      await updateProfile({
+        preferences: {
+          language,
+          timezone,
+          dateFormat,
+          timeFormat
+        }
+      });
+
+      toast({
+        title: "Success",
+        description: "General settings updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -51,7 +92,7 @@ export function GeneralSettings() {
             </SelectTrigger>
             <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
               <SelectItem value="UCT +00:00">UCT +00:00</SelectItem>
-              <SelectItem value="UCT +01:00">UCT +01:00</SelectItem>
+              <SelectItem value="UCT +01:00">UCT +01:00 (Tunisia)</SelectItem>
               <SelectItem value="UCT +02:00">UCT +02:00</SelectItem>
               <SelectItem value="UCT -05:00">UCT -05:00</SelectItem>
             </SelectContent>
@@ -142,6 +183,17 @@ export function GeneralSettings() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-center">
+        <Button 
+          className="bg-blue-500 hover:bg-blue-600 text-white px-16 py-3 h-12 rounded-full font-medium"
+          onClick={handleSaveChanges}
+          disabled={isLoading}
+        >
+          {isLoading ? "Saving..." : "Save changes"}
+        </Button>
       </div>
     </div>
   );

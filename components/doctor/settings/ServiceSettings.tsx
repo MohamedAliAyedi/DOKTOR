@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
+import { doctorsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,58 +17,17 @@ import {
 import { Search, Plus, Trash2, Edit } from "lucide-react";
 import { NewServiceModal } from "./NewServiceModal";
 
-const servicesData = [
-  {
-    id: 1,
-    name: "Visit",
-    price: "TND 50",
-    duration: "35 min",
-    description: "In-person consultation for personalize...",
-    status: "Inactive",
-  },
-  {
-    id: 2,
-    name: "X-Ray",
-    price: "TND 50",
-    duration: "35 min",
-    description: "Surgical intervention for effective trea...",
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Blood Test",
-    price: "TND 50",
-    duration: "35 min",
-    description: "Comprehensive blood analysis for ac...",
-    status: "Inactive",
-  },
-  {
-    id: 4,
-    name: "Urine Test",
-    price: "TND 50",
-    duration: "35 min",
-    description: "Urine screening to detect infections a...",
-    status: "Inactive",
-  },
-  {
-    id: 5,
-    name: "Operation",
-    price: "TND 50",
-    duration: "35 min",
-    description: "Surgical intervention for effective trea...",
-    status: "Active",
-  },
-];
-
 const getStatusBadge = (status: string) => {
   switch (status) {
     case "Active":
+    case true:
       return (
         <Badge className="bg-green-500 hover:bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
           Active
         </Badge>
       );
     case "Inactive":
+    case false:
       return (
         <Badge className="bg-gray-400 hover:bg-gray-400 text-white px-3 py-1 rounded-full text-xs font-medium">
           Inactive
@@ -81,20 +43,93 @@ const getStatusBadge = (status: string) => {
 };
 
 export function ServiceSettings() {
-  const [services, setServices] = useState(servicesData);
+  const { toast } = useToast();
+  const [services, setServices] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [priceFilter, setPriceFilter] = useState("Price");
   const [statusFilter, setStatusFilter] = useState("Status");
   const [durationFilter, setDurationFilter] = useState("Duration");
   const [isNewServiceModalOpen, setIsNewServiceModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleAddNewService = (newService: any) => {
-    setServices([...services, newService]);
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  const fetchServices = async () => {
+    try {
+      const response = await doctorsAPI.getDoctorProfile();
+      const doctor = response.data.data.doctor;
+      setServices(doctor.services || []);
+    } catch (error) {
+      console.error('Failed to fetch services:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDeleteService = (id: number) => {
-    setServices(services.filter((service) => service.id !== id));
+  const handleAddNewService = async (newService: any) => {
+    try {
+      await doctorsAPI.addService(newService);
+      toast({
+        title: "Success",
+        description: "Service added successfully",
+      });
+      fetchServices(); // Refresh the list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to add service",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleDeleteService = async (serviceId: string) => {
+    try {
+      await doctorsAPI.deleteService(serviceId);
+      toast({
+        title: "Success",
+        description: "Service deleted successfully",
+      });
+      fetchServices(); // Refresh the list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete service",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditService = async (serviceId: string, updatedData: any) => {
+    try {
+      await doctorsAPI.updateService(serviceId, updatedData);
+      toast({
+        title: "Success",
+        description: "Service updated successfully",
+      });
+      fetchServices(); // Refresh the list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update service",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredServices = services.filter(service => {
+    const matchesSearch = !searchTerm || 
+      service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === "Status" || 
+      (statusFilter === "Active" && service.isActive) ||
+      (statusFilter === "Inactive" && !service.isActive);
+    
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-8">
@@ -141,8 +176,8 @@ export function ServiceSettings() {
             </SelectTrigger>
             <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
               <SelectItem value="Duration">Duration</SelectItem>
-              <SelectItem value="Short">Short</SelectItem>
-              <SelectItem value="Long">Long</SelectItem>
+              <SelectItem value="Short">Short (≤30 min)</SelectItem>
+              <SelectItem value="Long">Long (>30 min)</SelectItem>
             </SelectContent>
           </Select>
 
@@ -170,50 +205,64 @@ export function ServiceSettings() {
 
         {/* Table Rows */}
         <div className="divide-y divide-gray-100">
-          {services.map((service) => (
-            <div
-              key={service.id}
-              className="grid grid-cols-6 gap-4 py-4 px-6 hover:bg-gray-50 transition-colors items-center"
-            >
-              {/* Service Name */}
-              <div className="text-sm text-gray-900 font-medium">
-                {service.name}
-              </div>
-
-              {/* Price */}
-              <div className="text-sm text-gray-600">{service.price}</div>
-
-              {/* Duration */}
-              <div className="text-sm text-gray-600">{service.duration}</div>
-
-              {/* Description */}
-              <div className="text-sm text-gray-600 truncate">
-                {service.description}
-              </div>
-
-              {/* Status */}
-              <div>{getStatusBadge(service.status)}</div>
-
-              {/* Actions */}
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-8 h-8 p-0 text-red-500 hover:bg-red-50"
-                  onClick={() => handleDeleteService(service.id)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-              </div>
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
             </div>
-          ))}
+          ) : filteredServices.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No services found
+            </div>
+          ) : (
+            filteredServices.map((service) => (
+              <div
+                key={service._id}
+                className="grid grid-cols-6 gap-4 py-4 px-6 hover:bg-gray-50 transition-colors items-center"
+              >
+                {/* Service Name */}
+                <div className="text-sm text-gray-900 font-medium">
+                  {service.name}
+                </div>
+
+                {/* Price */}
+                <div className="text-sm text-gray-600">TND {service.price}</div>
+
+                {/* Duration */}
+                <div className="text-sm text-gray-600">{service.duration} min</div>
+
+                {/* Description */}
+                <div className="text-sm text-gray-600 truncate">
+                  {service.description || 'No description'}
+                </div>
+
+                {/* Status */}
+                <div>{getStatusBadge(service.isActive ? "Active" : "Inactive")}</div>
+
+                {/* Actions */}
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-8 h-8 p-0 text-red-500 hover:bg-red-50"
+                    onClick={() => handleDeleteService(service._id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
+                    onClick={() => {
+                      // Toggle service status
+                      handleEditService(service._id, { isActive: !service.isActive });
+                    }}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
 interface NewServiceModalProps {
@@ -30,10 +31,14 @@ export function NewServiceModal({
   const [isActive, setIsActive] = useState(true);
 
   const handleCreate = () => {
+    if (!serviceName || !cost || !duration) {
+      return;
+    }
+
     const newService = {
       name: serviceName,
       price: parseFloat(cost),
-      duration: duration,
+      duration: parseInt(duration),
       description: description,
       isActive: isActive,
     };
@@ -65,7 +70,9 @@ export function NewServiceModal({
           <div className="space-y-6">
             {/* Service Name */}
             <div className="space-y-2">
-              <Label className="text-sm text-blue-500 font-medium">Name</Label>
+              <Label className="text-sm text-blue-500 font-medium">
+                Name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 placeholder="Service name"
                 value={serviceName}
@@ -78,9 +85,10 @@ export function NewServiceModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm text-blue-500 font-medium">
-                  Cost
+                  Cost (TND) <span className="text-red-500">*</span>
                 </Label>
                 <Input
+                  type="number"
                   placeholder="Cost"
                   value={cost}
                   onChange={(e) => setCost(e.target.value)}
@@ -89,10 +97,11 @@ export function NewServiceModal({
               </div>
               <div className="space-y-2">
                 <Label className="text-sm text-blue-500 font-medium">
-                  Approximate Duration
+                  Duration (minutes) <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  placeholder="Approximate Duration"
+                  type="number"
+                  placeholder="Duration"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
@@ -105,11 +114,11 @@ export function NewServiceModal({
               <Label className="text-sm text-blue-500 font-medium">
                 Description
               </Label>
-              <Input
-                placeholder="Description"
+              <Textarea
+                placeholder="Service description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="h-12 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                className="min-h-[80px] border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-none"
               />
             </div>
 
@@ -141,6 +150,7 @@ export function NewServiceModal({
               <Button
                 onClick={handleCreate}
                 className="px-12 py-3 h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-medium"
+                disabled={!serviceName || !cost || !duration}
               >
                 Create
               </Button>
