@@ -56,9 +56,10 @@ export function NewBillModal({ isOpen, onClose }: NewBillModalProps) {
   const fetchPatients = async () => {
     try {
       const response = await patientsAPI.getPatients();
-      setPatients(response.data.data.patients);
+      setPatients(response.data.data.patients || []);
     } catch (error) {
       console.error('Failed to fetch patients:', error);
+      setPatients([]); // Set empty array on error
     }
   };
 
@@ -66,9 +67,10 @@ export function NewBillModal({ isOpen, onClose }: NewBillModalProps) {
     try {
       const response = await doctorsAPI.getDoctorProfile();
       const doctorProfile = response.data.data.doctor;
-      setServices(doctorProfile.services || []);
+      setServices(doctorProfile?.services || []);
     } catch (error) {
       console.error('Failed to fetch services:', error);
+      setServices([]); // Set empty array on error
     }
   };
 

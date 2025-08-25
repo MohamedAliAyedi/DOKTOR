@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { billingAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Plus, FileText } from "lucide-react";
@@ -58,15 +57,17 @@ export function BillingListContent() {
       setIsLoading(true);
       const response = await billingAPI.getBills({
         search: searchTerm,
-        paymentStatus: filterValue === "All bills" ? undefined : filterValue.toLowerCase()
+        paymentStatus:
+          filterValue === "All bills" ? undefined : filterValue.toLowerCase(),
       });
-      setBills(response.data.data.bills);
+      setBills(response.data.data.bills || []);
     } catch (error: any) {
       toast({
         title: "Error",
         description: "Failed to fetch bills",
         variant: "destructive",
       });
+      setBills([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +101,7 @@ export function BillingListContent() {
             </p>
           </div>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsNewBillModalOpen(true)}
           className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2"
         >
@@ -156,72 +157,74 @@ export function BillingListContent() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             </div>
           ) : bills.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No bills found
-            </div>
+            <div className="text-center py-8 text-gray-500">No bills found</div>
           ) : (
             bills.map((bill) => (
-            <div
-              key={bill._id}
-              className="grid grid-cols-7 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center"
-            >
-              {/* Patient */}
-              <div className="flex items-center space-x-3">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={bill.patient?.user?.avatar} />
-                  <AvatarFallback>
-                    {bill.patient?.user?.firstName?.[0]}{bill.patient?.user?.lastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+              <div
+                key={bill._id}
+                className="grid grid-cols-7 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center"
+              >
+                {/* Patient */}
+                <div className="flex items-center space-x-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={bill.patient?.user?.avatar} />
+                    <AvatarFallback>
+                      {bill.patient?.user?.firstName?.[0]}
+                      {bill.patient?.user?.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">
+                      {bill.patient?.user?.firstName}{" "}
+                      {bill.patient?.user?.lastName}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      See patient&apos;s profile
+                    </p>
+                  </div>
+                </div>
+
+                {/* Date */}
+                <div className="text-sm text-gray-600">
+                  {new Date(bill.issueDate).toLocaleDateString()}
+                </div>
+
+                {/* Cost */}
+                <div className="text-sm text-gray-900 font-medium">
+                  {bill.currency} {bill.totalAmount}
+                </div>
+
+                {/* Payment Method */}
+                <div className="text-sm text-gray-600 capitalize">
+                  {bill.paymentMethod || "Not specified"}
+                </div>
+
+                {/* Time */}
+                <div className="text-sm text-gray-600">
+                  {new Date(bill.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+
+                {/* Status */}
+                <div>{getStatusBadge(bill.paymentStatus || "pending")}</div>
+
+                {/* Bill */}
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">
-                    {bill.patient?.user?.firstName} {bill.patient?.user?.lastName}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    See patient's profile
-                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
+                    onClick={() =>
+                      window.open(`/api/bills/${bill._id}/pdf`, "_blank")
+                    }
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
-
-              {/* Date */}
-              <div className="text-sm text-gray-600">
-                {new Date(bill.issueDate).toLocaleDateString()}
-              </div>
-
-              {/* Cost */}
-              <div className="text-sm text-gray-900 font-medium">
-                {bill.currency} {bill.totalAmount}
-              </div>
-
-              {/* Payment Method */}
-              <div className="text-sm text-gray-600 capitalize">
-                {bill.paymentMethod || 'Not specified'}
-              </div>
-
-              {/* Time */}
-              <div className="text-sm text-gray-600">
-                {new Date(bill.createdAt).toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </div>
-
-              {/* Status */}
-              <div>{getStatusBadge(bill.paymentStatus)}</div>
-
-              {/* Bill */}
-              <div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
-                  onClick={() => window.open(`/api/bills/${bill._id}/pdf`, '_blank')}
-                >
-                  <FileText className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          ))
+            ))
           )}
         </div>
       </div>

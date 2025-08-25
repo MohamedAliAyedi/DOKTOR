@@ -43,7 +43,7 @@ export function DoctorsContent() {
     try {
       setError(null);
       const response = await patientsAPI.getPatientDoctors();
-      const connectedDoctors = response.data.data.doctors
+      const connectedDoctors = (response.data.data.doctors || [])
         .filter((d: any) => d.status === "active")
         .map((d: any) => ({
           ...d.doctor,
@@ -54,6 +54,7 @@ export function DoctorsContent() {
     } catch (error) {
       console.error("Failed to fetch connected doctors:", error);
       setError("Failed to load connected doctors");
+      setDoctors([]); // Set empty array on error
       toast({
         title: "Error",
         description: "Failed to load your connected doctors",

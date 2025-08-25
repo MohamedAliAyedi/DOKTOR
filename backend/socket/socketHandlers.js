@@ -46,7 +46,7 @@ const initializeSocket = (io) => {
     socket.join(`user_${socket.userId}`);
 
     // Emit online status to relevant users
-    socket.broadcast.emit('user_online', {
+    io.emit('user_online', {
       userId: socket.userId,
       user: {
         id: socket.user._id,
@@ -55,6 +55,19 @@ const initializeSocket = (io) => {
         avatar: socket.user.avatar
       }
     });
+
+    // Send current online users to the newly connected user
+    const onlineUsers = Array.from(activeConnections.values()).map(conn => ({
+      userId: conn.user._id.toString(),
+      user: {
+        id: conn.user._id,
+        fullName: conn.user.fullName,
+        role: conn.user.role,
+        avatar: conn.user.avatar
+      }
+    }));
+    
+    socket.emit('online_users_list', { users: onlineUsers });
 
     // Handle joining chat rooms
     socket.on('join_chat', async (data) => {
@@ -134,6 +147,19 @@ const initializeSocket = (io) => {
         chat.lastMessage = message._id;
         chat.lastActivity = new Date();
         await chat.save();
+
+        // Mark as delivered to all participants except sender
+        const otherParticipants = chat.participants.filter(p => 
+          p.user.toString() !== socket.userId && p.isActive
+        );
+        
+        const deliveredTo = otherParticipants.map(p => ({
+          user: p.user,
+          deliveredAt: new Date()
+        }));
+        
+        message.deliveredTo = deliveredTo;
+        await message.save();
 
         // Emit message to all chat participants
         io.to(`chat_${chatId}`).emit('new_message', {
@@ -349,7 +375,7 @@ const initializeSocket = (io) => {
       activeConnections.delete(socket.userId);
 
       // Emit offline status
-      socket.broadcast.emit('user_offline', {
+      io.emit('user_offline', {
         userId: socket.userId,
         lastSeen: new Date()
       });

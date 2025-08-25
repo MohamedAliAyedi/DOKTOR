@@ -43,14 +43,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (storedToken) {
         try {
           const response = await authAPI.getMe();
-          setUser(response.data.data.user);
+          const userData = response.data.data.user;
+          setUser(userData);
           setToken(storedToken);
           
           // Connect to socket
           socketService.connect(storedToken);
         } catch (error) {
+          console.error('Failed to get user data:', error);
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
+          setUser(null);
+          setToken(null);
         }
       }
       setIsLoading(false);
@@ -73,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Connect to socket
       socketService.connect(newToken);
     } catch (error: any) {
+      console.error('Login error:', error);
       throw new Error(error.response?.data?.message || 'Login failed');
     }
   };
@@ -91,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Connect to socket
       socketService.connect(newToken);
     } catch (error: any) {
+      console.error('Registration error:', error);
       throw new Error(error.response?.data?.message || 'Registration failed');
     }
   };
@@ -108,8 +114,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (data: any) => {
     try {
       const response = await authAPI.updateProfile(data);
-      setUser(response.data.data.user);
+      setUser(response.data.data.user || response.data.user);
     } catch (error: any) {
+      console.error('Profile update error:', error);
       throw new Error(error.response?.data?.message || 'Profile update failed');
     }
   };
@@ -120,8 +127,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Refresh user data
       const response = await authAPI.getMe();
-      setUser(response.data.data.user);
+      setUser(response.data.data.user || response.data.user);
     } catch (error: any) {
+      console.error('OTP verification error:', error);
       throw new Error(error.response?.data?.message || 'OTP verification failed');
     }
   };
@@ -130,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authAPI.resendOTP({ type, email: user?.email });
     } catch (error: any) {
+      console.error('Resend OTP error:', error);
       throw new Error(error.response?.data?.message || 'Failed to resend OTP');
     }
   };

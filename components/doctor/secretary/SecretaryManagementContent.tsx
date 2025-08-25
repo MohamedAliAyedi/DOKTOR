@@ -80,9 +80,10 @@ export function SecretaryManagementContent() {
   const fetchSecretaries = async () => {
     try {
       const response = await secretariesAPI.getSecretaries();
-      setSecretaries(response.data.data.secretaries);
+      setSecretaries(response.data.data.secretaries || []);
     } catch (error) {
       console.error('Failed to fetch secretaries:', error);
+      setSecretaries([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useEffect } from "react";
 import { consultationsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Search, ChevronDown, Plus, FileText } from "lucide-react";
@@ -42,18 +41,19 @@ export function ConsultationHistoryContent() {
     try {
       setError(null);
       const params: any = {
-        status: 'completed'
+        status: "completed",
       };
-      
+
       if (searchTerm) params.search = searchTerm;
-      
+
       const response = await consultationsAPI.getConsultations({
-        ...params
+        ...params,
       });
-      setConsultations(response.data.data.consultations);
+      setConsultations(response.data.data.consultations || []);
     } catch (error) {
-      console.error('Failed to fetch consultations:', error);
-      setError('Failed to load consultations');
+      console.error("Failed to fetch consultations:", error);
+      setError("Failed to load consultations");
+      setConsultations([]); // Set empty array on error
       toast({
         title: "Error",
         description: "Failed to fetch consultations",
@@ -86,12 +86,15 @@ export function ConsultationHistoryContent() {
               History consultation list
             </h1>
             <p className="text-sm text-gray-500">
-              {consultations.filter(c => {
-                const consultDate = new Date(c.createdAt);
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                return consultDate >= yesterday;
-              }).length} New consultations were added recently
+              {
+                consultations.filter((c) => {
+                  const consultDate = new Date(c.createdAt);
+                  const yesterday = new Date();
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  return consultDate >= yesterday;
+                }).length
+              }{" "}
+              New consultations were added recently
             </p>
           </div>
         </div>
@@ -108,7 +111,7 @@ export function ConsultationHistoryContent() {
             <p className="text-red-600 text-sm">{error}</p>
           </div>
         )}
-        
+
         {/* Search and Filters */}
         <div className="flex items-center justify-between mb-6">
           {/* Search */}
@@ -197,59 +200,66 @@ export function ConsultationHistoryContent() {
             </div>
           ) : (
             consultations.map((consultation) => (
-            <div
-              key={consultation._id}
-              className="grid grid-cols-5 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center"
-            >
-              {/* Patient */}
-              <div className="flex items-center space-x-3">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={consultation.patient?.user?.avatar} />
-                  <AvatarFallback>
-                    {consultation.patient?.user?.firstName?.[0]}{consultation.patient?.user?.lastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+              <div
+                key={consultation._id}
+                className="grid grid-cols-5 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center"
+              >
+                {/* Patient */}
+                <div className="flex items-center space-x-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={consultation.patient?.user?.avatar} />
+                    <AvatarFallback>
+                      {consultation.patient?.user?.firstName?.[0]}
+                      {consultation.patient?.user?.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">
+                      {consultation.patient?.user?.firstName}{" "}
+                      {consultation.patient?.user?.lastName}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      See patient&apos;s profile
+                    </p>
+                  </div>
+                </div>
+
+                {/* Date */}
+                <div className="text-sm text-gray-600">
+                  {new Date(consultation.startTime).toLocaleDateString()}
+                </div>
+
+                {/* Time */}
+                <div className="text-sm text-gray-600">
+                  {new Date(consultation.startTime).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+
+                {/* Duration */}
+                <div className="text-sm text-gray-600">
+                  {consultation.duration || 0} min
+                </div>
+
+                {/* Consultation Report */}
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">
-                    {consultation.patient?.user?.firstName} {consultation.patient?.user?.lastName}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    See patient&apos;s profile
-                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
+                    onClick={() =>
+                      window.open(
+                        `/api/consultations/${consultation._id}/report`,
+                        "_blank"
+                      )
+                    }
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
-
-              {/* Date */}
-              <div className="text-sm text-gray-600">
-                {new Date(consultation.startTime).toLocaleDateString()}
-              </div>
-
-              {/* Time */}
-              <div className="text-sm text-gray-600">
-                {new Date(consultation.startTime).toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </div>
-
-              {/* Duration */}
-              <div className="text-sm text-gray-600">
-                {consultation.duration || 0} min
-              </div>
-
-              {/* Consultation Report */}
-              <div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
-                  onClick={() => window.open(`/api/consultations/${consultation._id}/report`, '_blank')}
-                >
-                  <FileText className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          ))
+            ))
           )}
         </div>
       </div>

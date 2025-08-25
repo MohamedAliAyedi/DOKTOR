@@ -17,7 +17,7 @@ export function MedicationReminders() {
     try {
       const response = await patientsAPI.getCurrentMedications();
 
-      const activeMedications = response.data.data.medications.map(
+      const activeMedications = (response.data.data.medications || []).map(
         (medRecord: any) => {
           const prescription = medRecord.medication;
           const medication = prescription.medications?.[0];

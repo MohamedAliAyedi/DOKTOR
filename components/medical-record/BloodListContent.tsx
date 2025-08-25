@@ -51,7 +51,7 @@ export function BloodListContent() {
       }
 
       const response = await medicalRecordsAPI.getBloodTestRecords(params);
-      const records = response.data.data.records;
+      const records = response.data.data.records || [];
 
       // Transform data to match component expectations
       const transformedData = records.map((record: any) => ({
@@ -68,6 +68,7 @@ export function BloodListContent() {
     } catch (error: any) {
       console.error("Failed to fetch blood test records:", error);
       setError("Failed to load blood test records");
+      setBloodData([]); // Set empty array on error
       toast({
         title: "Error",
         description: "Failed to fetch blood test records",

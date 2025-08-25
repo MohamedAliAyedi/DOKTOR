@@ -22,7 +22,6 @@ const searchDoctors = catchAsync(async (req, res, next) => {
   } = req.query;
 
   let query = {};
-  let userQuery = { role: 'doctor', isActive: true };
 
   // Apply filters
   if (specialization) {
@@ -67,7 +66,12 @@ const searchDoctors = catchAsync(async (req, res, next) => {
     );
   }
 
-  const total = await Doctor.countDocuments(query);
+  // Get total count with user filter
+  const totalDoctors = await Doctor.find(query).populate({
+    path: 'user',
+    match: { role: 'doctor', isActive: true }
+  });
+  const total = totalDoctors.filter(d => d.user).length;
 
   res.status(200).json({
     status: 'success',

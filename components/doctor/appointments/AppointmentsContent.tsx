@@ -207,7 +207,7 @@ export function AppointmentsContent() {
         endDate: endDate.toISOString()
       });
       
-      const appointments = response.data.data.appointments;
+      const appointments = response.data.data.appointments || [];
       const groupedAppointments: Record<string, Appointment[]> = {};
       
       appointments.forEach((apt: any) => {

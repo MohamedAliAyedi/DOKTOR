@@ -19,7 +19,7 @@ export function NotificationsSection() {
       const response = await notificationsAPI.getNotifications({ 
         limit: 4,
       });
-      setNotifications(response.data.data.notifications);
+      setNotifications(response.data.data.notifications || []);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
       setNotifications([]);

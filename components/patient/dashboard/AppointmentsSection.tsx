@@ -31,18 +31,23 @@ export function AppointmentsSection() {
   };
 
   const calculateTimeUntil = (scheduledDate: string, scheduledTime: string) => {
-    const appointmentDateTime = new Date(scheduledDate);
-    const [hours, minutes] = scheduledTime.split(":");
-    appointmentDateTime.setHours(parseInt(hours), parseInt(minutes));
+    try {
+      const appointmentDateTime = new Date(scheduledDate);
+      const [hours, minutes] = scheduledTime.split(":");
+      appointmentDateTime.setHours(parseInt(hours), parseInt(minutes));
 
-    const now = new Date();
-    const diffTime = appointmentDateTime.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const now = new Date();
+      const diffTime = appointmentDateTime.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Tomorrow";
-    if (diffDays < 0) return "Past";
-    return `in ${diffDays} days`;
+      if (diffDays === 0) return "Today";
+      if (diffDays === 1) return "Tomorrow";
+      if (diffDays < 0) return "Past";
+      return `in ${diffDays} days`;
+    } catch (error) {
+      console.error('Error calculating time until appointment:', error);
+      return "Unknown";
+    }
   };
 
   return (

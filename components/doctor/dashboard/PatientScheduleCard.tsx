@@ -18,7 +18,7 @@ export function PatientScheduleCard() {
         const response = await dashboardAPI.getDoctorDashboardStats();
         const { recentAppointments } = response.data.data;
         
-        const formattedAppointments = recentAppointments.map((apt: any) => ({
+        const formattedAppointments = (recentAppointments || []).map((apt: any) => ({
           id: apt._id,
           name: `${apt.patient.user.firstName} ${apt.patient.user.lastName}`,
           time: `${apt.scheduledTime.start} - ${apt.scheduledTime.end}`,
@@ -30,6 +30,7 @@ export function PatientScheduleCard() {
       } catch (error) {
         console.error('Failed to fetch appointments:', error);
         setError('Failed to load appointments');
+        setAppointments([]); // Set empty array on error
       } finally {
         setIsLoading(false);
       }

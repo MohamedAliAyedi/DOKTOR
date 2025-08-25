@@ -173,9 +173,7 @@ const createAppointment = catchAsync(async (req, res, next) => {
   const isConnected = patient.doctors.some(
     (d) => d.doctor.toString() === doctorId && d.status === "active"
   );
-  if (!isConnected) {
-    return next(new AppError("You are not connected to this doctor", 403));
-  }
+  // Allow booking even if not connected - connection will be created
 
   // Check for scheduling conflicts
   const appointmentDate = new Date(scheduledDate);
@@ -197,6 +195,25 @@ const createAppointment = catchAsync(async (req, res, next) => {
 
   if (conflictingAppointment) {
     return next(new AppError("Time slot is not available", 409));
+  }
+
+  // If not connected, create connection automatically
+  if (!isConnected) {
+    patient.doctors.push({
+      doctor: doctorId,
+      status: 'active',
+      connectedAt: new Date(),
+      isPrimary: patient.doctors.length === 0
+    });
+    
+    doctor.patients.push({
+      patient: patient._id,
+      status: 'active',
+      connectedAt: new Date()
+    });
+    
+    await patient.save();
+    await doctor.save();
   }
 
   // Create appointment

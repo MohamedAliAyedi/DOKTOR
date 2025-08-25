@@ -11,16 +11,24 @@ const emailService = require("../utils/email");
 const smsService = require("../utils/sms");
 
 // Helper function to create and send token
-const createSendToken = (user, statusCode, res, message = "Success") => {
+const createSendToken = async (userData, statusCode, res, message = "Success") => {
+  // Ensure we have a user object with the necessary methods
+  let user = userData;
+  if (typeof userData.generateAuthToken !== 'function') {
+    // If userData is a plain object, we need to get the actual user document
+    user = await User.findById(userData._id || userData.id);
+  }
+
   const token = user.generateAuthToken();
   const refreshToken = user.generateRefreshToken();
 
   // Save refresh token to database
-  user.save({ validateBeforeSave: false });
+  await user.save({ validateBeforeSave: false });
 
   // Remove password from output
-  user.password = undefined;
-  user.refreshTokens = undefined;
+  const responseUser = { ...userData };
+  delete responseUser.password;
+  delete responseUser.refreshTokens;
 
   res.status(statusCode).json({
     status: "success",
@@ -28,7 +36,7 @@ const createSendToken = (user, statusCode, res, message = "Success") => {
     token,
     refreshToken,
     data: {
-      user,
+      user: responseUser,
     },
   });
 };
@@ -118,7 +126,7 @@ const register = catchAsync(async (req, res, next) => {
     console.error("Failed to send verification messages:", error);
   }
 
-  createSendToken(
+  await createSendToken(
     user,
     201,
     res,
@@ -179,8 +187,24 @@ const login = catchAsync(async (req, res, next) => {
   // Update last login safely without triggering pre-save hooks
   await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
+  // Populate role-specific profile before sending response
+  let populatedUser = user.toObject();
+  delete populatedUser.password;
+  delete populatedUser.refreshTokens;
+
+  if (user.role === 'doctor' && user.doctorProfile) {
+    const doctorProfile = await Doctor.findById(user.doctorProfile);
+    populatedUser.profile = doctorProfile;
+  } else if (user.role === 'patient' && user.patientProfile) {
+    const patientProfile = await Patient.findById(user.patientProfile);
+    populatedUser.profile = patientProfile;
+  } else if (user.role === 'secretary' && user.secretaryProfile) {
+    const secretaryProfile = await Secretary.findById(user.secretaryProfile);
+    populatedUser.profile = secretaryProfile;
+  }
+
   // Send token
-  createSendToken(user, 200, res, "Login successful");
+  await createSendToken(populatedUser, 200, res, "Login successful");
 });
 
 // Forgot password
@@ -251,7 +275,7 @@ const resetPassword = catchAsync(async (req, res, next) => {
 
   await user.save();
 
-  createSendToken(user, 200, res, "Password reset successful");
+  await createSendToken(user, 200, res, "Password reset successful");
 });
 
 // Verify OTP (email or phone)
@@ -470,7 +494,7 @@ const updatePassword = catchAsync(async (req, res, next) => {
   user.password = newPassword;
   await user.save();
 
-  createSendToken(user, 200, res, "Password updated successfully");
+  await createSendToken(user, 200, res, "Password updated successfully");
 });
 
 // Update profile

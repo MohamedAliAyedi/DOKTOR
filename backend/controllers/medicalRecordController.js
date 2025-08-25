@@ -509,26 +509,23 @@ const getImagingResults = catchAsync(async (req, res, next) => {
   });
 });
 
-module.exports = {
-  getMedicalRecords,
-  createMedicalRecord,
-  getMedicalRecordById,
-  updateMedicalRecord,
-  deleteMedicalRecord,
-  addAttachments,
-  removeAttachment,
-  shareRecord,
-  revokeAccess,
-  getAccessLog,
-  getRecordTypes,
-  addLabResults,
-  getLabResults,
-  addImagingResults,
-  getImagingResults,
-  getXRayRecords,
-  getBloodTestRecords,
-  getXRayRecords,
-};
+// module.exports = {
+//   getMedicalRecords,
+//   createMedicalRecord,
+//   getMedicalRecordById,
+//   updateMedicalRecord,
+//   deleteMedicalRecord,
+//   addAttachments,
+//   removeAttachment,
+//   shareRecord,
+//   revokeAccess,
+//   getAccessLog,
+//   getRecordTypes,
+//   addLabResults,
+//   getLabResults,
+//   addImagingResults,
+//   getImagingResults,
+// };
 
 // Get X-ray records specifically
 const getXRayRecords = catchAsync(async (req, res, next) => {
@@ -615,3 +612,24 @@ const getBloodTestRecords = catchAsync(async (req, res, next) => {
     },
   });
 });
+
+// Export the functions properly
+module.exports = {
+  getMedicalRecords,
+  createMedicalRecord,
+  getMedicalRecordById,
+  updateMedicalRecord,
+  deleteMedicalRecord,
+  addAttachments,
+  removeAttachment,
+  shareRecord,
+  revokeAccess,
+  getAccessLog,
+  getRecordTypes,
+  addLabResults,
+  getLabResults,
+  addImagingResults,
+  getImagingResults,
+  getXRayRecords,
+  getBloodTestRecords,
+};

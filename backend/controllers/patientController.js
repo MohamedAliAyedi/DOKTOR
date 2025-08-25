@@ -229,11 +229,10 @@ const getPatients = catchAsync(async (req, res, next) => {
       .map(p => p.patient);
     query._id = { $in: patientIds };
   } else if (req.user.role === 'secretary') {
-    const secretary = await Secretary.findOne({ user: req.user._id });
+    const secretary = await Secretary.findOne({ user: req.user._id }).populate('doctor');
     if (secretary) {
-      const doctor = await Doctor.findById(secretary.doctor);
-      if (doctor) {
-        const patientIds = doctor.patients
+      if (secretary.doctor) {
+        const patientIds = secretary.doctor.patients
           .filter(p => p.status === 'active')
           .map(p => p.patient);
         query._id = { $in: patientIds };
@@ -266,9 +265,9 @@ const getPatients = catchAsync(async (req, res, next) => {
   // Search filter
   if (search) {
     filteredPatients = filteredPatients.filter(patient => 
-      patient.user.firstName.toLowerCase().includes(search.toLowerCase()) ||
-      patient.user.lastName.toLowerCase().includes(search.toLowerCase()) ||
-      patient.patientId.toLowerCase().includes(search.toLowerCase())
+      patient.user?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+      patient.user?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+      patient.patientId?.toLowerCase().includes(search.toLowerCase())
     );
   }
 

@@ -42,15 +42,21 @@ api.interceptors.response.use(
 
           const { token, refreshToken: newRefreshToken } = response.data;
           localStorage.setItem('token', token);
-          localStorage.setItem('refreshToken', newRefreshToken);
+          if (newRefreshToken) {
+            localStorage.setItem('refreshToken', newRefreshToken);
+          }
 
           originalRequest.headers.Authorization = `Bearer ${token}`;
           return api(originalRequest);
         }
       } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/auth/signin';
+        // Only redirect if we're not already on an auth page
+        if (!window.location.pathname.startsWith('/auth')) {
+          window.location.href = '/auth/signin';
+        }
       }
     }
 

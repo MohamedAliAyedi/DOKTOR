@@ -50,9 +50,10 @@ export function BookAppointmentModal({
   const fetchDoctors = async () => {
     try {
       const response = await doctorsAPI.searchDoctors();
-      setDoctors(response.data.data.doctors);
+      setDoctors(response.data.data.doctors || []);
     } catch (error) {
       console.error("Failed to fetch doctors:", error);
+      setDoctors([]); // Set empty array on error
     }
   };
 

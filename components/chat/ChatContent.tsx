@@ -86,11 +86,18 @@ export function ChatContent() {
       });
     };
 
+    const handleOnlineUsersList = (event: any) => {
+      const { users } = event.detail;
+      const userIds = users.map((u: any) => u.userId);
+      setOnlineUsers(new Set(userIds));
+    };
+
     window.addEventListener("new_message", handleNewMessage);
     window.addEventListener("user_typing", handleUserTyping);
     window.addEventListener("user_stopped_typing", handleUserStoppedTyping);
     window.addEventListener("user_online", handleUserOnline);
     window.addEventListener("user_offline", handleUserOffline);
+    window.addEventListener("online_users_list", handleOnlineUsersList);
 
     return () => {
       window.removeEventListener("new_message", handleNewMessage);
@@ -101,6 +108,7 @@ export function ChatContent() {
       );
       window.removeEventListener("user_online", handleUserOnline);
       window.removeEventListener("user_offline", handleUserOffline);
+      window.removeEventListener("online_users_list", handleOnlineUsersList);
     };
   }, [selectedChat, user?._id]);
 

@@ -39,7 +39,7 @@ export function PermissionSettings() {
   const fetchSecretaries = async () => {
     try {
       const response = await secretariesAPI.getSecretaries();
-      const secretaries = response.data.data.secretaries;
+      const secretaries = response.data.data.secretaries || [];
       setTeamMembers(secretaries);
       
       if (secretaries.length > 0) {
@@ -48,6 +48,7 @@ export function PermissionSettings() {
       }
     } catch (error) {
       console.error('Failed to fetch secretaries:', error);
+      setTeamMembers([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }

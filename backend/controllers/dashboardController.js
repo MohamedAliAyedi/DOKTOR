@@ -37,7 +37,7 @@ const getDoctorDashboardStats = catchAsync(async (req, res, next) => {
     revenueTrend,
     patientStats
   ] = await Promise.all([
-    Patient.countDocuments({ 'doctors.doctor': doctor._id, 'doctors.status': 'active' }),
+    doctor.patients ? doctor.patients.filter(p => p.status === 'active').length : 0,
     
     Bill.aggregate([
       { 
@@ -185,9 +185,9 @@ const getDoctorDashboardStats = catchAsync(async (req, res, next) => {
         pendingBills,
         totalBills
       },
-      recentAppointments,
-      revenueTrend: revenueTrend,
-      patientStats
+      recentAppointments: recentAppointments || [],
+      revenueTrend: revenueTrend || [],
+      patientStats: patientStats || []
     }
   });
 });

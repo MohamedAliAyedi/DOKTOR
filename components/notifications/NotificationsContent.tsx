@@ -28,7 +28,7 @@ export function NotificationsContent() {
   const fetchNotifications = async () => {
     try {
       const response = await notificationsAPI.getNotifications();
-      setNotifications(response.data.data.notifications);
+      setNotifications(response.data.data.notifications || []);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
       setNotifications([]);

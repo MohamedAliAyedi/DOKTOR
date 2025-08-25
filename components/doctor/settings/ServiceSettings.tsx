@@ -60,9 +60,10 @@ export function ServiceSettings() {
     try {
       const response = await doctorsAPI.getDoctorProfile();
       const doctor = response.data.data.doctor;
-      setServices(doctor.services || []);
+      setServices(doctor?.services || []);
     } catch (error) {
       console.error('Failed to fetch services:', error);
+      setServices([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }

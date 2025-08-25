@@ -68,7 +68,7 @@ export function PermissionSettingsContent() {
   const fetchSecretaries = async () => {
     try {
       const response = await secretariesAPI.getSecretaries();
-      const secretariesData = response.data.data.secretaries;
+      const secretariesData = response.data.data.secretaries || [];
       setSecretaries(secretariesData);
 
       if (secretariesData.length > 0) {
@@ -77,6 +77,7 @@ export function PermissionSettingsContent() {
       }
     } catch (error) {
       console.error("Failed to fetch secretaries:", error);
+      setSecretaries([]); // Set empty array on error
       toast({
         title: "Error",
         description: "Failed to load secretaries",

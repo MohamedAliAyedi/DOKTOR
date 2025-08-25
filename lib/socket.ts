@@ -52,6 +52,11 @@ class SocketService {
       window.dispatchEvent(new CustomEvent('user_offline', { detail: data }));
     });
 
+    // Handle online users list
+    this.socket.on('online_users_list', (data) => {
+      window.dispatchEvent(new CustomEvent('online_users_list', { detail: data }));
+    });
+
     // Notification events
     this.socket.on('new_notification', (data) => {
       window.dispatchEvent(new CustomEvent('new_notification', { detail: data }));

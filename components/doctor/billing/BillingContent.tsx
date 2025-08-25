@@ -125,8 +125,8 @@ export function BillingContent() {
         billingAPI.getRevenueReport({ period: selectedPeriod.toLowerCase() })
       ]);
 
-      setBillingStats(statsResponse.data.data.statistics);
-      setRecentBills(billsResponse.data.data.bills);
+      setBillingStats(statsResponse.data.data.statistics || {});
+      setRecentBills(billsResponse.data.data.bills || []);
 
       // Process revenue data for charts
       const revenue = revenueResponse.data.data.revenueData || [];
@@ -154,7 +154,7 @@ export function BillingContent() {
       });
 
       // Income breakdown by service type
-      const breakdown = billsResponse.data.data.bills.reduce((acc: any, bill: any) => {
+      const breakdown = (billsResponse.data.data.bills || []).reduce((acc: any, bill: any) => {
         const type = bill.billType || 'other';
         acc[type] = (acc[type] || 0) + bill.totalAmount;
         return acc;
@@ -176,6 +176,11 @@ export function BillingContent() {
     } catch (error) {
       console.error('Failed to fetch billing data:', error);
       setError('Failed to load billing data');
+      // Set default empty data on error
+      setBillingStats({});
+      setRecentBills([]);
+      setRevenueData({ labels: [], datasets: [] });
+      setIncomeBreakdown({ labels: [], datasets: [] });
       toast({
         title: "Error",
         description: "Failed to fetch billing data",

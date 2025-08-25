@@ -56,7 +56,7 @@ export function PatientListContent() {
       if (genderFilter !== "Gender") params.gender = genderFilter.toLowerCase();
 
       const response = await patientsAPI.getPatients(params);
-      const patientsData = response.data.data.patients;
+      const patientsData = response.data.data.patients || [];
 
       // Transform data to match component expectations
       const transformedPatients = patientsData.map((patient: any) => ({
@@ -76,6 +76,7 @@ export function PatientListContent() {
     } catch (error: any) {
       console.error("Failed to fetch patients:", error);
       setError("Failed to load patients");
+      setPatients([]); // Set empty array on error
       toast({
         title: "Error",
         description: "Failed to fetch patients",

@@ -19,7 +19,7 @@ export function StatsCards() {
         setStats([
           {
             title: "Revenue this month",
-            value: `TND ${statistics.monthlyRevenue?.toLocaleString() || 0}`,
+            value: `TND ${(statistics.monthlyRevenue || 0).toLocaleString()}`,
             subtitle: "This month's earnings",
             icon: "$",
             bgColor: "bg-white",
@@ -28,7 +28,7 @@ export function StatsCards() {
           },
           {
             title: "Pending payments",
-            value: `TND ${statistics.pendingRevenue?.toLocaleString() || 0}`,
+            value: `TND ${(statistics.pendingRevenue || 0).toLocaleString()}`,
             subtitle: `${statistics.pendingBills || 0} invoices pending`,
             icon: "♥",
             bgColor: "bg-white",
@@ -57,6 +57,45 @@ export function StatsCards() {
       } catch (error) {
         console.error('Failed to fetch stats:', error);
         setError('Failed to load statistics');
+        // Set default stats on error
+        setStats([
+          {
+            title: "Revenue this month",
+            value: "TND 0",
+            subtitle: "This month's earnings",
+            icon: "$",
+            bgColor: "bg-white",
+            cardBg: "bg-primary",
+            textColor: "text-primary",
+          },
+          {
+            title: "Pending payments",
+            value: "TND 0",
+            subtitle: "0 invoices pending",
+            icon: "♥",
+            bgColor: "bg-white",
+            cardBg: "bg-secondary",
+            textColor: "text-secondary",
+          },
+          {
+            title: "Today's patients",
+            value: "0",
+            subtitle: "Scheduled for today",
+            icon: "⚡",
+            bgColor: "bg-white",
+            cardBg: "bg-yellow-400",
+            textColor: "text-yellow-400",
+          },
+          {
+            title: "Paid invoices",
+            value: "0",
+            subtitle: "Out of 0 total invoices",
+            icon: "📋",
+            bgColor: "bg-white",
+            cardBg: "bg-sky-400",
+            textColor: "text-sky-400",
+          },
+        ]);
       } finally {
         setIsLoading(false);
       }

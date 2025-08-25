@@ -72,7 +72,9 @@ export function PatientInfoCard() {
   const patientInfo = [
     {
       label: "Gender",
-      value: patientProfile?.gender || "Not specified",
+      value: patientProfile?.gender ? 
+        patientProfile.gender.charAt(0).toUpperCase() + patientProfile.gender.slice(1) : 
+        "Not specified",
       color: "text-blue-600",
     },
     {

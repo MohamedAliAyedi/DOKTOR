@@ -61,7 +61,7 @@ export function DoctorsDirectoryContent() {
       if (selectedSpecialty !== "All Specialties") params.specialization = selectedSpecialty;
       
       const response = await doctorsAPI.searchDoctors(params);
-      const doctors = response.data.data.doctors;
+      const doctors = response.data.data.doctors || [];
       
       // Transform data to match component expectations
       const transformedDoctors = doctors.map((doctor: any) => ({
@@ -86,6 +86,7 @@ export function DoctorsDirectoryContent() {
     } catch (error: any) {
       console.error('Failed to fetch doctors:', error);
       setError('Failed to load doctors');
+      setDoctorsData([]); // Set empty array on error
       toast({
         title: "Error",
         description: "Failed to fetch doctors",

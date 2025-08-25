@@ -51,7 +51,7 @@ export function XRayListContent() {
       }
 
       const response = await medicalRecordsAPI.getXRayRecords(params);
-      const records = response.data.data.records;
+      const records = response.data.data.records || [];
 
       // Transform data to match component expectations
       const transformedData = records.map((record: any) => ({
@@ -68,6 +68,7 @@ export function XRayListContent() {
     } catch (error: any) {
       console.error("Failed to fetch X-ray records:", error);
       setError("Failed to load X-ray records");
+      setXrayData([]); // Set empty array on error
       toast({
         title: "Error",
         description: "Failed to fetch X-ray records",

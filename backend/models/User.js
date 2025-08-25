@@ -186,6 +186,11 @@ userSchema.methods.generateRefreshToken = function () {
     { expiresIn: process.env.JWT_REFRESH_EXPIRE || "30d" }
   );
 
+  // Clean up old refresh tokens (keep only last 5)
+  if (this.refreshTokens.length >= 5) {
+    this.refreshTokens = this.refreshTokens.slice(-4);
+  }
+
   this.refreshTokens.push({ token: refreshToken });
   return refreshToken;
 };

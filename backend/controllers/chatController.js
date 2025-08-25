@@ -21,17 +21,37 @@ const getUserChats = catchAsync(async (req, res, next) => {
   }
 
   const chats = await Chat.find(query)
-    .populate('participants.user', 'firstName lastName avatar role')
+    .populate({
+      path: 'participants.user',
+      select: 'firstName lastName avatar role isActive',
+      match: { isActive: true }
+    })
     .populate('lastMessage')
     .sort({ lastActivity: -1 })
     .limit(limit * 1)
     .skip((page - 1) * limit);
 
+  // Filter out chats where user population failed
+  const validChats = chats.filter(chat => 
+    chat.participants.every(p => p.user !== null)
+  );
+
+  // Add unread count for each chat
+  for (let chat of validChats) {
+    const unreadCount = await Message.countDocuments({
+      chat: chat._id,
+      'readBy.user': { $ne: req.user._id },
+      sender: { $ne: req.user._id },
+      isDeleted: false
+    });
+    chat.unreadCount = unreadCount;
+  }
+
   const total = await Chat.countDocuments(query);
 
   res.status(200).json({
     status: 'success',
-    results: chats.length,
+    results: validChats.length,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
@@ -39,7 +59,7 @@ const getUserChats = catchAsync(async (req, res, next) => {
       pages: Math.ceil(total / limit)
     },
     data: {
-      chats
+      chats: validChats
     }
   });
 });
@@ -53,7 +73,10 @@ const createChat = catchAsync(async (req, res, next) => {
   }
 
   // Verify all participants exist
-  const participants = await User.find({ _id: { $in: participantIds } });
+  const participants = await User.find({ 
+    _id: { $in: participantIds },
+    isActive: true 
+  });
   if (participants.length !== participantIds.length) {
     return next(new AppError('One or more participants not found', 400));
   }
@@ -65,7 +88,7 @@ const createChat = catchAsync(async (req, res, next) => {
       'participants.user': { $all: [req.user._id, participantIds[0]] },
       'participants.isActive': true,
       isActive: true
-    });
+    }).populate('participants.user', 'firstName lastName avatar role');
 
     if (existingChat) {
       return res.status(200).json({
@@ -180,6 +203,23 @@ const getChatMessages = catchAsync(async (req, res, next) => {
     Message.countDocuments({ chat: chatId, isDeleted: false })
   ]);
 
+  // Mark messages as delivered to current user
+  await Message.updateMany(
+    {
+      chat: chatId,
+      sender: { $ne: req.user._id },
+      'deliveredTo.user': { $ne: req.user._id },
+      isDeleted: false
+    },
+    {
+      $push: {
+        deliveredTo: {
+          user: req.user._id,
+          deliveredAt: new Date()
+        }
+      }
+    }
+  );
 
   res.status(200).json({
     status: 'success',
