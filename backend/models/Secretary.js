@@ -174,7 +174,7 @@ const secretarySchema = new mongoose.Schema({
 // Pre-save middleware to generate employee ID
 secretarySchema.pre('save', async function(next) {
   if (!this.employeeId) {
-    const count = await mongoose.model('Secretary').countDocuments();
+    const count = await this.constructor.countDocuments();
     this.employeeId = `S-${String(count + 1).padStart(5, '0')}`;
   }
   next();

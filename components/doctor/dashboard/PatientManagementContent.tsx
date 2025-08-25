@@ -95,7 +95,7 @@ export function PatientManagementContent() {
   const [stats, setStats] = useState({
     recovered: 0,
     scheduled: 0,
-    totalPatients: 0
+    totalPatients: 0,
   });
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -116,28 +116,39 @@ export function PatientManagementContent() {
     try {
       setError(null);
       const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-      
+      const startOfDay = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+      const endOfDay = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        23,
+        59,
+        59
+      );
+
       const params: any = {
         startDate: startOfDay.toISOString(),
-        endDate: endOfDay.toISOString()
+        endDate: endOfDay.toISOString(),
       };
-      
+
       if (searchTerm) {
         params.search = searchTerm;
       }
-      
+
       if (statusFilter !== "all") {
         params.status = statusFilter;
       }
-      
+
       const response = await appointmentsAPI.getAppointments(params);
-      
+
       setAppointments(response.data.data.appointments);
     } catch (error) {
-      console.error('Failed to fetch today\'s appointments:', error);
-      setError('Failed to load today\'s appointments');
+      console.error("Failed to fetch today's appointments:", error);
+      setError("Failed to load today's appointments");
       toast({
         title: "Error",
         description: "Failed to fetch today's appointments",
@@ -152,14 +163,14 @@ export function PatientManagementContent() {
     try {
       const response = await doctorsAPI.getDoctorStatistics();
       const { statistics } = response.data.data;
-      
+
       setStats({
         recovered: statistics.completedConsultations || 0,
         scheduled: statistics.todayAppointments || 0,
-        totalPatients: statistics.totalPatients || 0
+        totalPatients: statistics.totalPatients || 0,
       });
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
+      console.error("Failed to fetch stats:", error);
     }
   };
 
@@ -167,14 +178,20 @@ export function PatientManagementContent() {
     router.push(`/doctor/consultation/${appointmentId}`);
   };
 
-  const filteredAppointments = appointments.filter(appointment => {
-    const matchesSearch = !searchTerm || 
-      appointment.patient?.user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appointment.patient?.user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredAppointments = appointments.filter((appointment) => {
+    const matchesSearch =
+      !searchTerm ||
+      appointment.patient?.user?.firstName
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      appointment.patient?.user?.lastName
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       appointment.reason?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || appointment.status === statusFilter;
-    
+
+    const matchesStatus =
+      statusFilter === "all" || appointment.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
@@ -234,7 +251,7 @@ export function PatientManagementContent() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center mb-6">
             <p className="text-red-600 text-sm">{error}</p>
-            <Button 
+            <Button
               onClick={fetchTodayAppointments}
               className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
             >
@@ -242,7 +259,7 @@ export function PatientManagementContent() {
             </Button>
           </div>
         )}
-        
+
         <div className="flex items-center justify-between mb-6">
           {/* Search */}
           <div className="relative w-80">
@@ -270,7 +287,7 @@ export function PatientManagementContent() {
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Select value={ageFilter} onValueChange={setAgeFilter}>
               <SelectTrigger className="w-24 h-10 border-gray-200 rounded-lg text-sm">
                 <SelectValue placeholder="Age" />
@@ -283,7 +300,7 @@ export function PatientManagementContent() {
                 <SelectItem value="60+">60+</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Select value={genderFilter} onValueChange={setGenderFilter}>
               <SelectTrigger className="w-28 h-10 border-gray-200 rounded-lg text-sm">
                 <SelectValue placeholder="Gender" />
@@ -320,55 +337,62 @@ export function PatientManagementContent() {
             </div>
           ) : (
             filteredAppointments.map((appointment) => (
-            <div
-              key={appointment._id}
-              onClick={() => handlePatientClick(appointment._id)}
-              className="grid grid-cols-7 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center cursor-pointer"
-            >
-              {/* Patient */}
-              <div className="flex items-center space-x-3">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={appointment.patient?.user?.avatar} />
-                  <AvatarFallback>
-                    {appointment.patient?.user?.firstName?.[0]}{appointment.patient?.user?.lastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+              <div
+                key={appointment._id}
+                onClick={() => handlePatientClick(appointment._id)}
+                className="grid grid-cols-7 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center cursor-pointer"
+              >
+                {/* Patient */}
+                <div className="flex items-center space-x-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={appointment.patient?.user?.avatar} />
+                    <AvatarFallback>
+                      {appointment.patient?.user?.firstName?.[0]}
+                      {appointment.patient?.user?.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">
+                      {appointment.patient?.user?.firstName}{" "}
+                      {appointment.patient?.user?.lastName}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      See patient&apos;s profile
+                    </p>
+                  </div>
+                </div>
+
+                {/* Time */}
+                <div className="text-sm text-gray-600">
+                  {appointment.scheduledTime?.start}
+                </div>
+
+                {/* Date */}
+                <div className="text-sm text-gray-600">
+                  {new Date(appointment.scheduledDate).toLocaleDateString()}
+                </div>
+
+                {/* Last Visit */}
+                <div className="text-sm text-gray-600">
+                  {appointment.updatedAt
+                    ? new Date(appointment.updatedAt).toLocaleDateString()
+                    : "First visit"}
+                </div>
+
+                {/* Reason */}
+                <div className="text-sm text-gray-600">
+                  {appointment.reason}
+                </div>
+
+                {/* Status */}
+                <div>{getStatusBadge(appointment.status)}</div>
+
+                {/* Payment Status */}
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">
-                    {appointment.patient?.user?.firstName} {appointment.patient?.user?.lastName}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    See patient&apos;s profile
-                  </p>
+                  {getPaymentBadge(appointment.billing ? "paid" : "pending")}
                 </div>
               </div>
-
-              {/* Time */}
-              <div className="text-sm text-gray-600">{appointment.scheduledTime?.start}</div>
-
-              {/* Date */}
-              <div className="text-sm text-gray-600">
-                {new Date(appointment.scheduledDate).toLocaleDateString()}
-              </div>
-
-              {/* Last Visit */}
-              <div className="text-sm text-gray-600">
-                {appointment.updatedAt ? 
-                  new Date(appointment.updatedAt).toLocaleDateString() : 
-                  'First visit'
-                }
-              </div>
-
-              {/* Reason */}
-              <div className="text-sm text-gray-600">{appointment.reason}</div>
-
-              {/* Status */}
-              <div>{getStatusBadge(appointment.status)}</div>
-
-              {/* Payment Status */}
-              <div>{getPaymentBadge(appointment.billing ? "paid" : "pending")}</div>
-            </div>
-          ))
+            ))
           )}
         </div>
       </div>

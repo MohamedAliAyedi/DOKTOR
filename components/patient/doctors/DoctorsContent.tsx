@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useEffect } from "react";
-import { patientsAPI } from "@/lib/api";
+import { doctorsAPI, patientsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,16 +44,16 @@ export function DoctorsContent() {
       setError(null);
       const response = await patientsAPI.getPatientDoctors();
       const connectedDoctors = response.data.data.doctors
-        .filter((d: any) => d.status === 'active')
+        .filter((d: any) => d.status === "active")
         .map((d: any) => ({
           ...d.doctor,
           connectedAt: d.connectedAt,
-          isPrimary: d.isPrimary
+          isPrimary: d.isPrimary,
         }));
       setDoctors(connectedDoctors);
     } catch (error) {
-      console.error('Failed to fetch connected doctors:', error);
-      setError('Failed to load connected doctors');
+      console.error("Failed to fetch connected doctors:", error);
+      setError("Failed to load connected doctors");
       toast({
         title: "Error",
         description: "Failed to load your connected doctors",
@@ -181,107 +181,122 @@ export function DoctorsContent() {
           </div>
         ) : (
           doctors.map((doctor) => (
-          <div
-            key={doctor._id}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-          >
-            {/* Doctor Header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={doctor.user?.avatar} />
-                    <AvatarFallback>{doctor.user?.firstName?.[0]}{doctor.user?.lastName?.[0]}</AvatarFallback>
-                  </Avatar>
-                  {doctor.isVerified && (
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                  )}
+            <div
+              key={doctor._id}
+              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+            >
+              {/* Doctor Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={doctor.user?.avatar} />
+                      <AvatarFallback>
+                        {doctor.user?.firstName?.[0]}
+                        {doctor.user?.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    {doctor.isVerified && (
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-sm">
+                      Dr. {doctor.user?.firstName} {doctor.user?.lastName}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {doctor.specialization}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">
-                    Dr. {doctor.user?.firstName} {doctor.user?.lastName}
-                  </h3>
-                  <p className="text-xs text-gray-500">{doctor.specialization}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-8 h-8 p-0 text-gray-400 hover:text-gray-600"
+                  onClick={() =>
+                    window.open(`tel:${doctor.user?.phoneNumber}`, "_self")
+                  }
+                >
+                  <Phone className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Rating */}
+              <div className="mb-4">
+                <div className="flex items-center space-x-1 mb-1">
+                  <span className="text-xs text-gray-600">Doctor rating</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  {renderStars(doctor.rating?.average || 0)}
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-8 h-8 p-0 text-gray-400 hover:text-gray-600"
-                onClick={() => window.open(`tel:${doctor.user?.phoneNumber}`, '_self')}
-              >
-                <Phone className="w-4 h-4" />
-              </Button>
-            </div>
 
-            {/* Rating */}
-            <div className="mb-4">
-              <div className="flex items-center space-x-1 mb-1">
-                <span className="text-xs text-gray-600">Doctor rating</span>
+              {/* Available Time */}
+              <div className="mb-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Clock className="w-4 h-4 text-gray-400" />
+                  <span className="text-xs text-gray-600">Available time</span>
+                </div>
+                <p className="text-sm font-medium text-gray-900">
+                  {doctor.workingHours?.monday?.start} -{" "}
+                  {doctor.workingHours?.monday?.end}
+                </p>
               </div>
-              <div className="flex items-center space-x-1">
-                {renderStars(doctor.rating?.average || 0)}
-              </div>
-            </div>
 
-            {/* Available Time */}
-            <div className="mb-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <span className="text-xs text-gray-600">Available time</span>
+              {/* Location */}
+              <div className="mb-6">
+                <div className="flex items-center space-x-2 mb-2">
+                  <MapPin className="w-4 h-4 text-gray-400" />
+                  <span className="text-xs text-gray-600">
+                    Location Practical
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700">
+                  {doctor.clinicInfo?.name || "Medical Center"}
+                </p>
               </div>
-              <p className="text-sm font-medium text-gray-900">
-                {doctor.workingHours?.monday?.start} - {doctor.workingHours?.monday?.end}
-              </p>
-            </div>
 
-            {/* Location */}
-            <div className="mb-6">
-              <div className="flex items-center space-x-2 mb-2">
-                <MapPin className="w-4 h-4 text-gray-400" />
-                <span className="text-xs text-gray-600">
-                  Location Practical
-                </span>
+              {/* Action Buttons */}
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-50 rounded-lg h-10 flex items-center justify-center space-x-2"
+                  onClick={() =>
+                    window.open(`/chat?doctor=${doctor._id}`, "_blank")
+                  }
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Message</span>
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg h-10 flex items-center justify-center space-x-2"
+                  onClick={() =>
+                    window.open(
+                      `/patient/appointments?doctor=${doctor._id}`,
+                      "_blank"
+                    )
+                  }
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>Book</span>
+                </Button>
               </div>
-              <p className="text-sm text-gray-700">
-                {doctor.clinicInfo?.name || 'Medical Center'}
-              </p>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-50 rounded-lg h-10 flex items-center justify-center space-x-2"
-                onClick={() => window.open(`/chat?doctor=${doctor._id}`, '_blank')}
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>Message</span>
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg h-10 flex items-center justify-center space-x-2"
-                onClick={() => window.open(`/patient/appointments?doctor=${doctor._id}`, '_blank')}
-              >
-                <Calendar className="w-4 h-4" />
-                <span>Book</span>
-              </Button>
+              {/* Disconnect Button */}
+              <div className="mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-red-200 text-red-500 hover:bg-red-50 rounded-lg h-8 text-xs"
+                  onClick={() => handleDisconnectDoctor(doctor._id)}
+                >
+                  Disconnect
+                </Button>
+              </div>
             </div>
-            
-            {/* Disconnect Button */}
-            <div className="mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full border-red-200 text-red-500 hover:bg-red-50 rounded-lg h-8 text-xs"
-                onClick={() => handleDisconnectDoctor(doctor._id)}
-              >
-                Disconnect
-              </Button>
-            </div>
-          </div>
-        ))
+          ))
         )}
       </div>
 

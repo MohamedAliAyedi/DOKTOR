@@ -31,6 +31,7 @@ export function NotificationsContent() {
       setNotifications(response.data.data.notifications);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
+      setNotifications([]);
     } finally {
       setIsLoading(false);
     }

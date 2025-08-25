@@ -177,7 +177,7 @@ const billSchema = new mongoose.Schema({
 // Pre-save middleware to generate bill ID and calculate totals
 billSchema.pre('save', async function(next) {
   if (!this.billId) {
-    const count = await mongoose.model('Bill').countDocuments();
+    const count = await this.constructor.countDocuments();
     this.billId = `BILL-${String(count + 1).padStart(6, '0')}`;
   }
   

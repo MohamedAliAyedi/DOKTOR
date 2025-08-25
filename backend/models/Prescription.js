@@ -220,7 +220,7 @@ const prescriptionSchema = new mongoose.Schema(
 // Pre-save middleware to generate prescription ID and calculate duration
 prescriptionSchema.pre("save", async function (next) {
   if (!this.prescriptionId) {
-    const count = await mongoose.model("Prescription").countDocuments();
+    const count = await this.constructor.countDocuments();
     this.prescriptionId = `RX-${String(count + 1).padStart(6, "0")}`;
   }
 

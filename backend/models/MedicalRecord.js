@@ -185,7 +185,7 @@ const medicalRecordSchema = new mongoose.Schema({
 // Pre-save middleware to generate record ID
 medicalRecordSchema.pre('save', async function(next) {
   if (!this.recordId) {
-    const count = await mongoose.model('MedicalRecord').countDocuments();
+    const count = await this.constructor.countDocuments();
     this.recordId = `MR-${String(count + 1).padStart(6, '0')}`;
   }
   next();

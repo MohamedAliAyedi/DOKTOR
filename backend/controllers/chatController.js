@@ -171,11 +171,11 @@ const getChatMessages = catchAsync(async (req, res, next) => {
 
   const [messages, total] = await Promise.all([
     Message.find(query)
-    .populate('sender', 'firstName lastName avatar role')
-    .populate('replyTo', 'content sender')
-    .sort({ createdAt: before ? -1 : 1 })
-    .limit(limit * 1)
-    .skip((page - 1) * limit),
+      .populate('sender', 'firstName lastName avatar role')
+      .populate('replyTo', 'content sender')
+      .sort({ createdAt: before ? -1 : 1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit),
     
     Message.countDocuments({ chat: chatId, isDeleted: false })
   ]);

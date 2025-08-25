@@ -13,7 +13,7 @@ export function StatsCards() {
     const fetchStats = async () => {
       try {
         setError(null);
-        const response = await dashboardAPI.getDoctorStats();
+        const response = await dashboardAPI.getDoctorDashboardStats();
         const { statistics } = response.data.data;
 
         setStats([
@@ -57,45 +57,6 @@ export function StatsCards() {
       } catch (error) {
         console.error('Failed to fetch stats:', error);
         setError('Failed to load statistics');
-        // Set default values on error
-        setStats([
-          {
-            title: "Revenue this month",
-            value: "TND 0",
-            subtitle: "Unable to load",
-            icon: "$",
-            bgColor: "bg-white",
-            cardBg: "bg-primary",
-            textColor: "text-primary",
-          },
-          {
-            title: "Pending payments", 
-            value: "TND 0",
-            subtitle: "Unable to load",
-            icon: "♥",
-            bgColor: "bg-white",
-            cardBg: "bg-secondary",
-            textColor: "text-secondary",
-          },
-          {
-            title: "Today's patients",
-            value: "0",
-            subtitle: "Unable to load",
-            icon: "⚡",
-            bgColor: "bg-white",
-            cardBg: "bg-yellow-400",
-            textColor: "text-yellow-400",
-          },
-          {
-            title: "Paid invoices",
-            value: "0",
-            subtitle: "Unable to load",
-            icon: "📋",
-            bgColor: "bg-white",
-            cardBg: "bg-sky-400",
-            textColor: "text-sky-400",
-          },
-        ]);
       } finally {
         setIsLoading(false);
       }

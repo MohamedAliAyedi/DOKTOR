@@ -43,30 +43,31 @@ export function XRayListContent() {
     try {
       setError(null);
       const params: any = {
-        bodyPart: activeFilter !== "Show all" ? activeFilter : undefined
+        bodyPart: activeFilter !== "Show all" ? activeFilter : undefined,
       };
-      
+
       if (searchTerm) {
         params.search = searchTerm;
       }
-      
+
       const response = await medicalRecordsAPI.getXRayRecords(params);
       const records = response.data.data.records;
-      
+
       // Transform data to match component expectations
       const transformedData = records.map((record: any) => ({
         id: record._id,
-        type: record.imagingResults?.bodyPart || 'Unknown',
+        type: record.imagingResults?.bodyPart || "Unknown",
         doctorName: `${record.doctor?.user?.firstName} ${record.doctor?.user?.lastName}`,
         date: new Date(record.createdAt).toLocaleDateString(),
-        reason: record.title || 'X-Ray examination',
-        prescription: record.imagingResults?.recommendations || 'See report for details'
+        reason: record.title || "X-Ray examination",
+        prescription:
+          record.imagingResults?.recommendations || "See report for details",
       }));
-      
+
       setXrayData(transformedData);
     } catch (error: any) {
-      console.error('Failed to fetch X-ray records:', error);
-      setError('Failed to load X-ray records');
+      console.error("Failed to fetch X-ray records:", error);
+      setError("Failed to load X-ray records");
       toast({
         title: "Error",
         description: "Failed to fetch X-ray records",
@@ -112,7 +113,7 @@ export function XRayListContent() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center mb-6">
             <p className="text-red-600 text-sm">{error}</p>
-            <Button 
+            <Button
               onClick={fetchXRayRecords}
               className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
             >
@@ -120,7 +121,7 @@ export function XRayListContent() {
             </Button>
           </div>
         )}
-        
+
         {/* Search and Duration Filter */}
         <div className="flex items-center justify-between mb-6">
           <div className="relative w-80">
@@ -188,40 +189,40 @@ export function XRayListContent() {
             </div>
           ) : (
             xrayData.map((xray) => (
-            <div
-              key={xray.id}
-              onClick={() => handleXRayClick(xray.id)}
-              className="grid grid-cols-6 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center cursor-pointer"
-            >
-              {/* X-Ray Type */}
-              <div className="text-sm text-gray-900 font-medium">
-                {xray.type}
+              <div
+                key={xray.id}
+                onClick={() => handleXRayClick(xray.id)}
+                className="grid grid-cols-6 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center cursor-pointer"
+              >
+                {/* X-Ray Type */}
+                <div className="text-sm text-gray-900 font-medium">
+                  {xray.type}
+                </div>
+
+                {/* Doctor Name */}
+                <div className="text-sm text-gray-600">{xray.doctorName}</div>
+
+                {/* Date */}
+                <div className="text-sm text-gray-600">{xray.date}</div>
+
+                {/* Reason */}
+                <div className="text-sm text-blue-500">{xray.reason}</div>
+
+                {/* Prescription */}
+                <div className="text-sm text-gray-600">{xray.prescription}</div>
+
+                {/* Report */}
+                <div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-
-              {/* Doctor Name */}
-              <div className="text-sm text-gray-600">{xray.doctorName}</div>
-
-              {/* Date */}
-              <div className="text-sm text-gray-600">{xray.date}</div>
-
-              {/* Reason */}
-              <div className="text-sm text-blue-500">{xray.reason}</div>
-
-              {/* Prescription */}
-              <div className="text-sm text-gray-600">{xray.prescription}</div>
-
-              {/* Report */}
-              <div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
-                >
-                  <FileText className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          ))
+            ))
           )}
         </div>
       </div>

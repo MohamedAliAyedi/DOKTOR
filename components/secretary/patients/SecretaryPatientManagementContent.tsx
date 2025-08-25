@@ -15,13 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { PatientStatusModal } from "./PatientStatusModal";
 import { PaymentModal } from "./PaymentModal";
 
@@ -101,7 +94,7 @@ export function SecretaryPatientManagementContent() {
   const [stats, setStats] = useState({
     recovered: 35,
     scheduled: 15,
-    totalPatients: 250
+    totalPatients: 250,
   });
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -122,38 +115,53 @@ export function SecretaryPatientManagementContent() {
     try {
       setError(null);
       const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-      
+      const startOfDay = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+      const endOfDay = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        23,
+        59,
+        59
+      );
+
       const params: any = {
         startDate: startOfDay.toISOString(),
-        endDate: endOfDay.toISOString()
+        endDate: endOfDay.toISOString(),
       };
-      
+
       if (searchTerm) {
         params.search = searchTerm;
       }
-      
+
       const response = await appointmentsAPI.getAppointments(params);
       const appointments = response.data.data.appointments;
-      
+
       // Transform appointments to patient data format
       const transformedPatients = appointments.map((appointment: any) => ({
         id: appointment._id,
         name: `${appointment.patient?.user?.firstName} ${appointment.patient?.user?.lastName}`,
-        avatar: appointment.patient?.user?.avatar || "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
+        avatar:
+          appointment.patient?.user?.avatar ||
+          "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
         time: appointment.scheduledTime?.start || "N/A",
         date: new Date(appointment.scheduledDate).toLocaleDateString(),
-        lastVisit: appointment.updatedAt ? new Date(appointment.updatedAt).toLocaleDateString() : "First visit",
+        lastVisit: appointment.updatedAt
+          ? new Date(appointment.updatedAt).toLocaleDateString()
+          : "First visit",
         reason: appointment.reason,
         status: appointment.status,
-        paymentStatus: appointment.billing ? "paid" : "pending"
+        paymentStatus: appointment.billing ? "paid" : "pending",
       }));
-      
+
       setPatients(transformedPatients);
     } catch (error: any) {
-      console.error('Failed to fetch today\'s appointments:', error);
-      setError('Failed to load today\'s appointments');
+      console.error("Failed to fetch today's appointments:", error);
+      setError("Failed to load today's appointments");
       toast({
         title: "Error",
         description: "Failed to fetch today's appointments",
@@ -179,15 +187,15 @@ export function SecretaryPatientManagementContent() {
       try {
         // Update appointment status via API
         await appointmentsAPI.updateAppointment(patientId.toString(), {
-          status: newStatus.toLowerCase().replace(' ', '-')
+          status: newStatus.toLowerCase().replace(" ", "-"),
         });
-        
+
         setPatients(
           patients.map((p) =>
             p.id === patientId ? { ...p, status: newStatus } : p
           )
         );
-        
+
         toast({
           title: "Success",
           description: "Patient status updated successfully",
@@ -195,12 +203,13 @@ export function SecretaryPatientManagementContent() {
       } catch (error: any) {
         toast({
           title: "Error",
-          description: error.response?.data?.message || "Failed to update status",
+          description:
+            error.response?.data?.message || "Failed to update status",
           variant: "destructive",
         });
       }
     };
-    
+
     updateStatusAsync();
     setIsStatusModalOpen(false);
     setSelectedPatient(null);
@@ -216,7 +225,7 @@ export function SecretaryPatientManagementContent() {
             p.id === patientId ? { ...p, paymentStatus: newPaymentStatus } : p
           )
         );
-        
+
         toast({
           title: "Success",
           description: "Payment status updated successfully",
@@ -229,7 +238,7 @@ export function SecretaryPatientManagementContent() {
         });
       }
     };
-    
+
     updatePaymentAsync();
     setIsPaymentModalOpen(false);
     setSelectedPatient(null);
@@ -291,7 +300,7 @@ export function SecretaryPatientManagementContent() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center mb-6">
             <p className="text-red-600 text-sm">{error}</p>
-            <Button 
+            <Button
               onClick={fetchTodayAppointments}
               className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
             >
@@ -299,7 +308,7 @@ export function SecretaryPatientManagementContent() {
             </Button>
           </div>
         )}
-        
+
         <div className="flex items-center justify-between mb-6">
           {/* Search */}
           <div className="relative w-80">
@@ -369,70 +378,70 @@ export function SecretaryPatientManagementContent() {
             </div>
           ) : (
             patients.map((patient) => (
-            <div
-              key={patient.id}
-              className="grid grid-cols-8 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center"
-            >
-              {/* Patient */}
-              <div className="flex items-center space-x-3">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={patient.avatar} />
-                  <AvatarFallback>
-                    {patient.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">
-                    {patient.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    See patient&apos;s profile
-                  </p>
+              <div
+                key={patient.id}
+                className="grid grid-cols-8 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center"
+              >
+                {/* Patient */}
+                <div className="flex items-center space-x-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={patient.avatar} />
+                    <AvatarFallback>
+                      {patient.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">
+                      {patient.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      See patient&apos;s profile
+                    </p>
+                  </div>
+                </div>
+
+                {/* Time */}
+                <div className="text-sm text-gray-600">{patient.time}</div>
+
+                {/* Date */}
+                <div className="text-sm text-gray-600">{patient.date}</div>
+
+                {/* Last Visit */}
+                <div className="text-sm text-gray-600">{patient.lastVisit}</div>
+
+                {/* Reason */}
+                <div className="text-sm text-gray-600">{patient.reason}</div>
+
+                {/* Status */}
+                <div>{getStatusBadge(patient.status)}</div>
+
+                {/* Payment Status */}
+                <div>{getPaymentBadge(patient.paymentStatus)}</div>
+
+                {/* Actions */}
+                <div className="flex items-center space-x-2">
+                  <Button
+                    onClick={() => handleStatusChange(patient)}
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-500 text-blue-500 hover:bg-blue-50 rounded-lg px-3 py-1 text-xs"
+                  >
+                    Change Status
+                  </Button>
+                  <Button
+                    onClick={() => handlePaymentChange(patient)}
+                    variant="outline"
+                    size="sm"
+                    className="border-green-500 text-green-500 hover:bg-green-50 rounded-lg px-3 py-1 text-xs flex items-center space-x-1"
+                  >
+                    <DollarSign className="w-3 h-3" />
+                  </Button>
                 </div>
               </div>
-
-              {/* Time */}
-              <div className="text-sm text-gray-600">{patient.time}</div>
-
-              {/* Date */}
-              <div className="text-sm text-gray-600">{patient.date}</div>
-
-              {/* Last Visit */}
-              <div className="text-sm text-gray-600">{patient.lastVisit}</div>
-
-              {/* Reason */}
-              <div className="text-sm text-gray-600">{patient.reason}</div>
-
-              {/* Status */}
-              <div>{getStatusBadge(patient.status)}</div>
-
-              {/* Payment Status */}
-              <div>{getPaymentBadge(patient.paymentStatus)}</div>
-
-              {/* Actions */}
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={() => handleStatusChange(patient)}
-                  variant="outline"
-                  size="sm"
-                  className="border-blue-500 text-blue-500 hover:bg-blue-50 rounded-lg px-3 py-1 text-xs"
-                >
-                  Change Status
-                </Button>
-                <Button
-                  onClick={() => handlePaymentChange(patient)}
-                  variant="outline"
-                  size="sm"
-                  className="border-green-500 text-green-500 hover:bg-green-50 rounded-lg px-3 py-1 text-xs flex items-center space-x-1"
-                >
-                  <DollarSign className="w-3 h-3" />
-                </Button>
-              </div>
-            </div>
-          ))
+            ))
           )}
         </div>
       </div>

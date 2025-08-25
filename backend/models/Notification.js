@@ -154,7 +154,7 @@ const notificationSchema = new mongoose.Schema({
 // Pre-save middleware to generate notification ID
 notificationSchema.pre('save', async function(next) {
   if (!this.notificationId) {
-    const count = await mongoose.model('Notification').countDocuments();
+    const count = await this.constructor.countDocuments();
     this.notificationId = `NOT-${String(count + 1).padStart(8, '0')}`;
   }
   next();

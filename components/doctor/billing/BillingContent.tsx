@@ -127,7 +127,6 @@ export function BillingContent() {
 
       setBillingStats(statsResponse.data.data.statistics);
       setRecentBills(billsResponse.data.data.bills);
-      setRevenueData(revenueResponse.data.data);
 
       // Process revenue data for charts
       const revenue = revenueResponse.data.data.revenueData || [];

@@ -283,7 +283,7 @@ export const secretariesAPI = {
 
 // Dashboard API
 export const dashboardAPI = {
-  getDoctorStats: () => api.get('/dashboard/doctor/stats'),
+  getDoctorDashboardStats: () => api.get('/dashboard/doctor/stats'),
   getPatientStats: () => api.get('/dashboard/patient/stats'),
 };
 

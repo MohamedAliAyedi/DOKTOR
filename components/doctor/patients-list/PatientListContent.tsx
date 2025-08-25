@@ -44,34 +44,38 @@ export function PatientListContent() {
     try {
       setError(null);
       const params: any = {};
-      
+
       if (searchTerm) params.search = searchTerm;
       if (ageFilter !== "Age") {
-        const [min, max] = ageFilter.split('-').map(a => parseInt(a.replace('+', '')));
+        const [min, max] = ageFilter
+          .split("-")
+          .map((a) => parseInt(a.replace("+", "")));
         if (min) params.ageMin = min;
         if (max) params.ageMax = max;
       }
       if (genderFilter !== "Gender") params.gender = genderFilter.toLowerCase();
-      
+
       const response = await patientsAPI.getPatients(params);
       const patientsData = response.data.data.patients;
-      
+
       // Transform data to match component expectations
       const transformedPatients = patientsData.map((patient: any) => ({
         id: patient._id,
         name: `${patient.user?.firstName} ${patient.user?.lastName}`,
-        avatar: patient.user?.avatar || "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-        age: patient.age || 'N/A',
+        avatar:
+          patient.user?.avatar ||
+          "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
+        age: patient.age || "N/A",
         visits: 0, // You might want to calculate this from appointments
         joinDate: new Date(patient.createdAt).toLocaleDateString(),
         lastVisit: new Date(patient.updatedAt).toLocaleDateString(),
-        patientId: patient.patientId
+        patientId: patient.patientId,
       }));
-      
+
       setPatients(transformedPatients);
     } catch (error: any) {
-      console.error('Failed to fetch patients:', error);
-      setError('Failed to load patients');
+      console.error("Failed to fetch patients:", error);
+      setError("Failed to load patients");
       toast({
         title: "Error",
         description: "Failed to fetch patients",
@@ -106,12 +110,15 @@ export function PatientListContent() {
               </Badge>
             </h1>
             <p className="text-sm text-gray-500">
-              {patients.filter(p => {
-                const joinDate = new Date(p.joinDate);
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                return joinDate >= yesterday;
-              }).length} New patients were added recently
+              {
+                patients.filter((p) => {
+                  const joinDate = new Date(p.joinDate);
+                  const yesterday = new Date();
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  return joinDate >= yesterday;
+                }).length
+              }{" "}
+              New patients were added recently
             </p>
           </div>
         </div>
@@ -152,7 +159,7 @@ export function PatientListContent() {
                 <SelectItem value="60+">60+</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Select value={genderFilter} onValueChange={setGenderFilter}>
               <SelectTrigger className="w-28 h-10 border-gray-200 rounded-lg text-sm">
                 <SelectValue />
@@ -163,7 +170,7 @@ export function PatientListContent() {
                 <SelectItem value="Female">Female</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Button
               variant="outline"
               className="flex items-center space-x-2 bg-white border-gray-200 hover:bg-gray-50 rounded-lg px-4 py-2"
@@ -192,7 +199,7 @@ export function PatientListContent() {
           ) : error ? (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
               <p className="text-red-600 text-sm">{error}</p>
-              <Button 
+              <Button
                 onClick={fetchPatients}
                 className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
               >
@@ -205,43 +212,43 @@ export function PatientListContent() {
             </div>
           ) : (
             patients.map((patient) => (
-            <div
-              key={patient.id}
-              onClick={() => handlePatientClick(patient.id)}
-              className="grid grid-cols-5 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center cursor-pointer"
-            >
-              {/* Patient */}
-              <div className="flex items-center space-x-3">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={patient.avatar} />
-                  <AvatarFallback>
-                    {patient.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">
-                    {patient.name}
-                  </p>
-                  <p className="text-xs text-gray-500">See patient profile</p>
+              <div
+                key={patient.id}
+                onClick={() => handlePatientClick(patient.id)}
+                className="grid grid-cols-5 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center cursor-pointer"
+              >
+                {/* Patient */}
+                <div className="flex items-center space-x-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={patient.avatar} />
+                    <AvatarFallback>
+                      {patient.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">
+                      {patient.name}
+                    </p>
+                    <p className="text-xs text-gray-500">See patient profile</p>
+                  </div>
                 </div>
+
+                {/* Age */}
+                <div className="text-sm text-gray-600">{patient.age}</div>
+
+                {/* Visits */}
+                <div className="text-sm text-gray-600">{patient.visits}</div>
+
+                {/* Join Date */}
+                <div className="text-sm text-gray-600">{patient.joinDate}</div>
+
+                {/* Last Visit */}
+                <div className="text-sm text-gray-600">{patient.lastVisit}</div>
               </div>
-
-              {/* Age */}
-              <div className="text-sm text-gray-600">{patient.age}</div>
-
-              {/* Visits */}
-              <div className="text-sm text-gray-600">{patient.visits}</div>
-
-              {/* Join Date */}
-              <div className="text-sm text-gray-600">{patient.joinDate}</div>
-
-              {/* Last Visit */}
-              <div className="text-sm text-gray-600">{patient.lastVisit}</div>
-            </div>
-          ))
+            ))
           )}
         </div>
       </div>

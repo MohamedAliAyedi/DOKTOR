@@ -188,7 +188,7 @@ patientSchema.virtual('age').get(function() {
 // Pre-save middleware to generate patient ID
 patientSchema.pre('save', async function(next) {
   if (!this.patientId) {
-    const count = await mongoose.model('Patient').countDocuments();
+    const count = await this.constructor.countDocuments();
     this.patientId = `P-${String(count + 1).padStart(5, '0')}`;
   }
   next();

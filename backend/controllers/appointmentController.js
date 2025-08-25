@@ -103,12 +103,19 @@ const createAppointment = catchAsync(async (req, res, next) => {
     priority = "normal",
   } = req.body;
 
-  // Parse scheduledDate - handle multiple formats
+  // Parse scheduledDate - handle multiple formats with better validation
   if (typeof scheduledDate === 'string') {
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(scheduledDate)) {
+    // Handle DD/MM/YYYY format
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(scheduledDate)) {
       const [day, month, year] = scheduledDate.split("/");
-      scheduledDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-    } else {
+      scheduledDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    } 
+    // Handle YYYY-MM-DD format
+    else if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(scheduledDate)) {
+      scheduledDate = new Date(scheduledDate);
+    }
+    // Handle other ISO formats
+    else {
       scheduledDate = new Date(scheduledDate);
     }
   } else {
@@ -119,6 +126,12 @@ const createAppointment = catchAsync(async (req, res, next) => {
     return next(new AppError("Invalid scheduledDate format", 400));
   }
 
+  // Ensure the date is not in the past (except for same day)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (scheduledDate < today) {
+    return next(new AppError("Cannot schedule appointments in the past", 400));
+  }
   // Validate scheduledTime
   if (!scheduledTime?.start || !scheduledTime?.end) {
     return next(new AppError("scheduledTime must have start and end", 400));

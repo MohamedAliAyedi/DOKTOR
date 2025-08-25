@@ -15,7 +15,7 @@ export function PatientScheduleCard() {
     const fetchAppointments = async () => {
       try {
         setError(null);
-        const response = await dashboardAPI.getDoctorStats();
+        const response = await dashboardAPI.getDoctorDashboardStats();
         const { recentAppointments } = response.data.data;
         
         const formattedAppointments = recentAppointments.map((apt: any) => ({

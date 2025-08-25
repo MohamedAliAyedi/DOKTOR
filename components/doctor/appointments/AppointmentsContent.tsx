@@ -229,6 +229,7 @@ export function AppointmentsContent() {
       setAppointmentData(groupedAppointments);
     } catch (error) {
       console.error('Failed to fetch appointments:', error);
+      setAppointmentData({});
     }
   };
 

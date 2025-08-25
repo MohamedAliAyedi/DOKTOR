@@ -207,7 +207,9 @@ const getPatientDashboardStats = catchAsync(async (req, res, next) => {
     completedAppointments,
     activePrescriptions,
     connectedDoctors,
-    unreadNotifications
+    unreadNotifications,
+    recentMedicalRecords,
+    vitalSigns
   ] = await Promise.all([
     Appointment.find({
       patient: patient._id,
@@ -238,7 +240,17 @@ const getPatientDashboardStats = catchAsync(async (req, res, next) => {
     Notification.countDocuments({
       recipient: req.user._id,
       isRead: false
+    }),
+
+    MedicalRecord.find({
+      patient: patient._id
     })
+    .populate('doctor', 'user specialization')
+    .populate('doctor.user', 'firstName lastName')
+    .sort({ createdAt: -1 })
+    .limit(5),
+
+    patient.vitalSigns.slice(-5) // Get last 5 vital signs
   ]);
 
   res.status(200).json({
@@ -249,10 +261,13 @@ const getPatientDashboardStats = catchAsync(async (req, res, next) => {
         completedAppointments,
         activePrescriptions,
         connectedDoctors: connectedDoctors?.doctors?.filter(d => d.status === 'active').length || 0,
-        unreadNotifications
+        unreadNotifications,
+        recentMedicalRecords: recentMedicalRecords.length
       },
       upcomingAppointments,
-      connectedDoctors: connectedDoctors?.doctors?.filter(d => d.status === 'active') || []
+      connectedDoctors: connectedDoctors?.doctors?.filter(d => d.status === 'active') || [],
+      recentMedicalRecords,
+      vitalSigns
     }
   });
 });

@@ -201,7 +201,7 @@ const consultationSchema = new mongoose.Schema({
 // Pre-save middleware to generate consultation ID
 consultationSchema.pre('save', async function(next) {
   if (!this.consultationId) {
-    const count = await mongoose.model('Consultation').countDocuments();
+    const count = await this.constructor.countDocuments();
     this.consultationId = `CON-${String(count + 1).padStart(6, '0')}`;
   }
   

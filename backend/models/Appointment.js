@@ -180,7 +180,7 @@ appointmentSchema.virtual("isUpcoming").get(function () {
 appointmentSchema.pre("save", async function (next) {
   if (!this.appointmentId) {
     try {
-      const count = await mongoose.model('Appointment').countDocuments();
+      const count = await this.constructor.countDocuments();
       this.appointmentId = `APT-${String(count + 1).padStart(6, '0')}`;
     } catch (error) {
       console.error('Error generating appointment ID:', error);

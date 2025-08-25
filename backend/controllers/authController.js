@@ -337,6 +337,7 @@ const refreshToken = catchAsync(async (req, res, next) => {
   }
 
   try {
+    const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const user = await User.findById(decoded.id);
 

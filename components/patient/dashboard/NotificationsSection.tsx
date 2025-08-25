@@ -18,11 +18,11 @@ export function NotificationsSection() {
     try {
       const response = await notificationsAPI.getNotifications({ 
         limit: 4,
-        isRead: false 
       });
       setNotifications(response.data.data.notifications);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
+      setNotifications([]);
     } finally {
       setIsLoading(false);
     }

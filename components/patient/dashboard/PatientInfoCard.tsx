@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { patientsAPI } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 export function PatientInfoCard() {
   const { user } = useAuth();
@@ -21,8 +22,8 @@ export function PatientInfoCard() {
       const response = await patientsAPI.getPatientProfile();
       setPatientProfile(response.data.data.patient);
     } catch (error) {
-      console.error('Failed to fetch patient profile:', error);
-      setError('Failed to load patient information');
+      console.error("Failed to fetch patient profile:", error);
+      setError("Failed to load patient information");
     } finally {
       setIsLoading(false);
     }
@@ -39,7 +40,10 @@ export function PatientInfoCard() {
               <div className="h-4 bg-gray-200 rounded mb-4"></div>
               <div className="grid grid-cols-3 lg:grid-cols-6 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="bg-gray-200 rounded-lg p-3 h-16"></div>
+                  <div
+                    key={i}
+                    className="bg-gray-200 rounded-lg p-3 h-16"
+                  ></div>
                 ))}
               </div>
             </div>
@@ -54,7 +58,7 @@ export function PatientInfoCard() {
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-gray-50">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
           <p className="text-red-600 text-sm">{error}</p>
-          <Button 
+          <Button
             onClick={fetchPatientProfile}
             className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
           >
@@ -64,13 +68,44 @@ export function PatientInfoCard() {
       </div>
     );
   }
+
   const patientInfo = [
-    { label: "Gender", value: patientProfile?.gender || "Not specified", color: "text-blue-600" },
-    { label: "Age", value: patientProfile?.age?.toString() || "N/A", color: "text-blue-600" },
-    { label: "Height", value: patientProfile?.height ? `${patientProfile.height.value} ${patientProfile.height.unit}` : "N/A", color: "text-blue-600" },
-    { label: "Weight", value: patientProfile?.weight ? `${patientProfile.weight.value} ${patientProfile.weight.unit}` : "N/A", color: "text-blue-600" },
-    { label: "Blood Type", value: patientProfile?.bloodType || "Unknown", color: "text-blue-600" },
-    { label: "Fitzpatrick", value: patientProfile?.fitzpatrickType ? `${patientProfile.fitzpatrickType} Type` : "N/A", color: "text-blue-600" },
+    {
+      label: "Gender",
+      value: patientProfile?.gender || "Not specified",
+      color: "text-blue-600",
+    },
+    {
+      label: "Age",
+      value: patientProfile?.age?.toString() || "N/A",
+      color: "text-blue-600",
+    },
+    {
+      label: "Height",
+      value: patientProfile?.height
+        ? `${patientProfile.height.value} ${patientProfile.height.unit}`
+        : "N/A",
+      color: "text-blue-600",
+    },
+    {
+      label: "Weight",
+      value: patientProfile?.weight
+        ? `${patientProfile.weight.value} ${patientProfile.weight.unit}`
+        : "N/A",
+      color: "text-blue-600",
+    },
+    {
+      label: "Blood Type",
+      value: patientProfile?.bloodType || "Unknown",
+      color: "text-blue-600",
+    },
+    {
+      label: "Fitzpatrick",
+      value: patientProfile?.fitzpatrickType
+        ? `${patientProfile.fitzpatrickType} Type`
+        : "N/A",
+      color: "text-blue-600",
+    },
   ];
 
   return (
@@ -78,9 +113,15 @@ export function PatientInfoCard() {
       <div className="flex items-center space-x-6">
         {/* Avatar */}
         <Avatar className="w-20 h-20">
-          <AvatarImage src={user?.avatar || "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop&crop=face"} />
+          <AvatarImage
+            src={
+              user?.avatar ||
+              "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop&crop=face"
+            }
+          />
           <AvatarFallback className="bg-blue-500 text-white text-2xl">
-            {user?.firstName?.[0]}{user?.lastName?.[0]}
+            {user?.firstName?.[0]}
+            {user?.lastName?.[0]}
           </AvatarFallback>
         </Avatar>
 

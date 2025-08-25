@@ -43,30 +43,31 @@ export function BloodListContent() {
     try {
       setError(null);
       const params: any = {
-        testType: activeFilter !== "Blood" ? activeFilter : undefined
+        testType: activeFilter !== "Blood" ? activeFilter : undefined,
       };
-      
+
       if (searchTerm) {
         params.search = searchTerm;
       }
-      
+
       const response = await medicalRecordsAPI.getBloodTestRecords(params);
       const records = response.data.data.records;
-      
+
       // Transform data to match component expectations
       const transformedData = records.map((record: any) => ({
         id: record._id,
-        type: record.labResults?.testName || 'Blood Test',
+        type: record.labResults?.testName || "Blood Test",
         doctorName: `${record.doctor?.user?.firstName} ${record.doctor?.user?.lastName}`,
         date: new Date(record.createdAt).toLocaleDateString(),
-        reason: record.title || 'Blood analysis',
-        prescription: record.labResults?.recommendations || 'See report for details'
+        reason: record.title || "Blood analysis",
+        prescription:
+          record.labResults?.recommendations || "See report for details",
       }));
-      
+
       setBloodData(transformedData);
     } catch (error: any) {
-      console.error('Failed to fetch blood test records:', error);
-      setError('Failed to load blood test records');
+      console.error("Failed to fetch blood test records:", error);
+      setError("Failed to load blood test records");
       toast({
         title: "Error",
         description: "Failed to fetch blood test records",
@@ -114,7 +115,7 @@ export function BloodListContent() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center mb-6">
             <p className="text-red-600 text-sm">{error}</p>
-            <Button 
+            <Button
               onClick={fetchBloodTestRecords}
               className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
             >
@@ -122,7 +123,7 @@ export function BloodListContent() {
             </Button>
           </div>
         )}
-        
+
         {/* Search and Duration Filter */}
         <div className="flex items-center justify-between mb-6">
           <div className="relative w-80">
@@ -190,40 +191,42 @@ export function BloodListContent() {
             </div>
           ) : (
             bloodData.map((blood) => (
-            <div
-              key={blood.id}
-              onClick={() => handleBloodTestClick(blood.id)}
-              className="grid grid-cols-6 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center cursor-pointer"
-            >
-              {/* Blood Test Type */}
-              <div className="text-sm text-gray-900 font-medium">
-                {blood.type}
+              <div
+                key={blood.id}
+                onClick={() => handleBloodTestClick(blood.id)}
+                className="grid grid-cols-6 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center cursor-pointer"
+              >
+                {/* Blood Test Type */}
+                <div className="text-sm text-gray-900 font-medium">
+                  {blood.type}
+                </div>
+
+                {/* Doctor Name */}
+                <div className="text-sm text-gray-600">{blood.doctorName}</div>
+
+                {/* Date */}
+                <div className="text-sm text-gray-600">{blood.date}</div>
+
+                {/* Reason */}
+                <div className="text-sm text-blue-500">{blood.reason}</div>
+
+                {/* Prescription */}
+                <div className="text-sm text-gray-600">
+                  {blood.prescription}
+                </div>
+
+                {/* Report */}
+                <div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-
-              {/* Doctor Name */}
-              <div className="text-sm text-gray-600">{blood.doctorName}</div>
-
-              {/* Date */}
-              <div className="text-sm text-gray-600">{blood.date}</div>
-
-              {/* Reason */}
-              <div className="text-sm text-blue-500">{blood.reason}</div>
-
-              {/* Prescription */}
-              <div className="text-sm text-gray-600">{blood.prescription}</div>
-
-              {/* Report */}
-              <div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
-                >
-                  <FileText className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          ))
+            ))
           )}
         </div>
       </div>

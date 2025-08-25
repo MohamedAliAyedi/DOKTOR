@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { prescriptionsAPI } from "@/lib/api";
+import { patientsAPI, prescriptionsAPI } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
 
@@ -15,30 +15,42 @@ export function MedicationReminders() {
 
   const fetchCurrentMedications = async () => {
     try {
-      const response = await prescriptionsAPI.getPrescriptions({ 
-        status: 'active' 
-      });
-      
-      const activeMedications = response.data.data.prescriptions
-        .flatMap((prescription: any) => 
-          prescription.medications
-            .filter((med: any) => med.isActive)
-            .map((med: any) => ({
-              id: med._id || prescription._id + med.name,
-              name: med.name,
-              time: `${med.duration.startDate} - ${med.duration.endDate}`,
-              timing: Object.entries(med.timing || {})
-                .filter(([key, value]) => value)
-                .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())),
-              completed: false, // You might want to track this separately
-              dosage: `${med.dosage.amount}${med.dosage.unit}`,
-              frequency: med.frequency
-            }))
-        );
-      
+      const response = await patientsAPI.getCurrentMedications();
+
+      const activeMedications = response.data.data.medications.map(
+        (medRecord: any) => {
+          const prescription = medRecord.medication;
+          const medication = prescription.medications?.[0];
+
+          return {
+            id: prescription._id,
+            name: medication?.name || "Unknown medication",
+            time: `${new Date(
+              medRecord.startDate
+            ).toLocaleDateString()} - ${new Date(
+              medRecord.endDate
+            ).toLocaleDateString()}`,
+            timing: Object.entries(medication?.timing || {})
+              .filter(([key, value]) => value)
+              .map(([key]) =>
+                key
+                  .replace(/([A-Z])/g, " $1")
+                  .replace(/^./, (str) => str.toUpperCase())
+              ),
+            completed: false,
+            dosage: medication
+              ? `${medication.dosage.amount}${medication.dosage.unit}`
+              : "N/A",
+            frequency: medication?.frequency || "As needed",
+          };
+        }
+      );
+
       setMedications(activeMedications);
     } catch (error) {
-      console.error('Failed to fetch medications:', error);
+      console.error("Failed to fetch medications:", error);
+      // Set empty array on error to show "No active medications"
+      setMedications([]);
     } finally {
       setIsLoading(false);
     }
@@ -48,19 +60,17 @@ export function MedicationReminders() {
     try {
       // Record medication adherence
       await prescriptionsAPI.recordAdherence(medicationId, {
-        medicationName: medications.find(m => m.id === medicationId)?.name,
-        taken: true
+        medicationName: medications.find((m) => m.id === medicationId)?.name,
+        taken: true,
       });
-      
-      setMedications(prev => 
-        prev.map(med => 
-          med.id === medicationId 
-            ? { ...med, completed: true }
-            : med
+
+      setMedications((prev) =>
+        prev.map((med) =>
+          med.id === medicationId ? { ...med, completed: true } : med
         )
       );
     } catch (error) {
-      console.error('Failed to record medication adherence:', error);
+      console.error("Failed to record medication adherence:", error);
     }
   };
 

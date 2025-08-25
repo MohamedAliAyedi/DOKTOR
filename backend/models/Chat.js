@@ -200,7 +200,7 @@ const messageSchema = new mongoose.Schema({
 // Pre-save middleware to generate IDs
 chatSchema.pre('save', async function(next) {
   if (!this.chatId) {
-    const count = await mongoose.model('Chat').countDocuments();
+    const count = await this.constructor.countDocuments();
     this.chatId = `CHAT-${String(count + 1).padStart(6, '0')}`;
   }
   next();
@@ -208,7 +208,7 @@ chatSchema.pre('save', async function(next) {
 
 messageSchema.pre('save', async function(next) {
   if (!this.messageId) {
-    const count = await mongoose.model('Message').countDocuments();
+    const count = await this.constructor.countDocuments();
     this.messageId = `MSG-${String(count + 1).padStart(8, '0')}`;
   }
   next();
