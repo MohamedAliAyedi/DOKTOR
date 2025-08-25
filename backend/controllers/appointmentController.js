@@ -104,12 +104,16 @@ const createAppointment = catchAsync(async (req, res, next) => {
   } = req.body;
 
   // Parse scheduledDate - handle multiple formats with better validation
-  if (typeof scheduledDate === 'string') {
+  if (typeof scheduledDate === "string") {
     // Handle DD/MM/YYYY format
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(scheduledDate)) {
       const [day, month, year] = scheduledDate.split("/");
-      scheduledDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    } 
+      scheduledDate = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day)
+      );
+    }
     // Handle YYYY-MM-DD format
     else if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(scheduledDate)) {
       scheduledDate = new Date(scheduledDate);
@@ -139,7 +143,10 @@ const createAppointment = catchAsync(async (req, res, next) => {
 
   // Validate time format
   const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-  if (!timeRegex.test(scheduledTime.start) || !timeRegex.test(scheduledTime.end)) {
+  if (
+    !timeRegex.test(scheduledTime.start) ||
+    !timeRegex.test(scheduledTime.end)
+  ) {
     return next(new AppError("Invalid time format. Use HH:MM format", 400));
   }
 
@@ -177,20 +184,31 @@ const createAppointment = catchAsync(async (req, res, next) => {
 
   // Check for scheduling conflicts
   const appointmentDate = new Date(scheduledDate);
-  const startOfDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
-  const endOfDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate(), 23, 59, 59);
+  const startOfDay = new Date(
+    appointmentDate.getFullYear(),
+    appointmentDate.getMonth(),
+    appointmentDate.getDate()
+  );
+  const endOfDay = new Date(
+    appointmentDate.getFullYear(),
+    appointmentDate.getMonth(),
+    appointmentDate.getDate(),
+    23,
+    59,
+    59
+  );
 
   const conflictingAppointment = await Appointment.findOne({
     doctor: doctorId,
     scheduledDate: {
       $gte: startOfDay,
-      $lte: endOfDay
+      $lte: endOfDay,
     },
     status: { $in: ["scheduled", "confirmed", "in-progress"] },
     $and: [
       { "scheduledTime.start": { $lt: scheduledTime.end } },
-      { "scheduledTime.end": { $gt: scheduledTime.start } }
-    ]
+      { "scheduledTime.end": { $gt: scheduledTime.start } },
+    ],
   });
 
   if (conflictingAppointment) {
@@ -201,23 +219,26 @@ const createAppointment = catchAsync(async (req, res, next) => {
   if (!isConnected) {
     patient.doctors.push({
       doctor: doctorId,
-      status: 'active',
+      status: "active",
       connectedAt: new Date(),
-      isPrimary: patient.doctors.length === 0
+      isPrimary: patient.doctors.length === 0,
     });
-    
+
     doctor.patients.push({
       patient: patient._id,
-      status: 'active',
-      connectedAt: new Date()
+      status: "active",
+      connectedAt: new Date(),
     });
-    
+
     await patient.save();
     await doctor.save();
   }
+  // Generate unique appointment ID
+  const appointmentId = `appt_${Date.now()}`;
 
   // Create appointment
   const appointment = await Appointment.create({
+    appointmentId,
     patient: patient._id,
     doctor: doctorId,
     appointmentType,
@@ -691,7 +712,7 @@ const getAppointmentStatistics = catchAsync(async (req, res, next) => {
   if (req.user.role === "doctor") {
     const doctor = await Doctor.findOne({ user: req.user._id });
     if (!doctor) {
-      return next(new AppError('Doctor profile not found', 404));
+      return next(new AppError("Doctor profile not found", 404));
     }
     matchQuery.doctor = doctor._id;
   } else if (req.user.role === "secretary") {
@@ -724,7 +745,9 @@ const getAppointmentStatistics = catchAsync(async (req, res, next) => {
             $sum: { $cond: [{ $eq: ["$status", "no-show"] }, 1, 0] },
           },
           scheduledAppointments: {
-            $sum: { $cond: [{ $in: ["$status", ["scheduled", "confirmed"]] }, 1, 0] },
+            $sum: {
+              $cond: [{ $in: ["$status", ["scheduled", "confirmed"]] }, 1, 0],
+            },
           },
           averageDuration: { $avg: "$duration" },
           appointmentsByType: {
@@ -736,31 +759,35 @@ const getAppointmentStatistics = catchAsync(async (req, res, next) => {
         },
       },
     ]),
-    
+
     // Get monthly trend for the last 12 months
     Appointment.aggregate([
-      { 
+      {
         $match: {
           ...matchQuery,
-          scheduledDate: { 
-            $gte: new Date(new Date().getFullYear(), new Date().getMonth() - 11, 1) 
-          }
-        }
+          scheduledDate: {
+            $gte: new Date(
+              new Date().getFullYear(),
+              new Date().getMonth() - 11,
+              1
+            ),
+          },
+        },
       },
       {
         $group: {
           _id: {
             year: { $year: "$scheduledDate" },
-            month: { $month: "$scheduledDate" }
+            month: { $month: "$scheduledDate" },
           },
           count: { $sum: 1 },
           completed: {
-            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] }
-          }
-        }
+            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+          },
+        },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }
-    ])
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]),
   ]);
 
   res.status(200).json({
@@ -774,9 +801,9 @@ const getAppointmentStatistics = catchAsync(async (req, res, next) => {
         scheduledAppointments: 0,
         averageDuration: 0,
         appointmentsByType: [],
-        appointmentsByStatus: []
+        appointmentsByStatus: [],
       },
-      monthlyTrend
+      monthlyTrend,
     },
   });
 });
