@@ -28,6 +28,7 @@ import {
   DraggableLocation,
 } from "@hello-pangea/dnd";
 import { BookAppointmentModal } from "./BookAppointmentModal";
+import { PatientAppointmentDetailsModal } from "./PatientAppointmentDetailsModal";
 
 // Types
 type Appointment = {
@@ -37,6 +38,9 @@ type Appointment = {
   color: string;
   patient?: string;
   duration?: number; // in minutes
+  doctorName?: string;
+  reason?: string;
+  status?: string;
 };
 
 type CalendarDay = {
@@ -188,6 +192,8 @@ export function AppointmentsContent() {
     new Date().toISOString().split("T")[0]
   );
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const { toast } = useToast();
 
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -221,7 +227,10 @@ export function AppointmentsContent() {
           time: apt.scheduledTime.start,
           color: getAppointmentColor(apt.appointmentType),
           patient: apt.doctor?.user?.firstName?.[0] + apt.doctor?.user?.lastName?.[0] || 'DR',
-          duration: apt.duration
+          duration: apt.duration,
+          doctorName: `${apt.doctor?.user?.firstName} ${apt.doctor?.user?.lastName}`,
+          reason: apt.reason,
+          status: apt.status
         });
       });
       
@@ -242,6 +251,16 @@ export function AppointmentsContent() {
       'examination': 'bg-yellow-400'
     };
     return colors[type] || 'bg-gray-500';
+  };
+
+  const handleAppointmentClick = (appointment: Appointment, dateKey: string) => {
+    const appointmentDetails = {
+      ...appointment,
+      date: dateKey,
+      fullDoctorName: appointment.doctorName || 'Unknown Doctor'
+    };
+    setSelectedAppointment(appointmentDetails);
+    setIsAppointmentModalOpen(true);
   };
 
   // Generate calendar days for month view
@@ -525,11 +544,15 @@ export function AppointmentsContent() {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAppointmentClick(appointment, dayData.dateKey);
+                                }}
                                 className={`${
                                   appointment.color
                                 } text-white text-xs px-2 py-1 rounded-md relative ${
                                   isDragging ? "shadow-lg" : ""
-                                }`}
+                                } cursor-pointer hover:opacity-90`}
                               >
                                 <div className="flex items-start">
                                   <GripVertical className="w-3 h-3 mr-1 opacity-70" />
@@ -1004,6 +1027,17 @@ export function AppointmentsContent() {
       <BookAppointmentModal
         isOpen={isBookModalOpen}
         onClose={() => setIsBookModalOpen(false)}
+      />
+
+      {/* Appointment Details Modal */}
+      <PatientAppointmentDetailsModal
+        isOpen={isAppointmentModalOpen}
+        onClose={() => setIsAppointmentModalOpen(false)}
+        appointment={selectedAppointment}
+        onUpdate={() => {
+          fetchAppointments();
+          setIsAppointmentModalOpen(false);
+        }}
       />
     </DragDropContext>
   );

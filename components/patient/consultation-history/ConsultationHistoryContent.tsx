@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { consultationsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { Search, ChevronDown, Plus, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,105 +15,59 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const consultationData = [
-  {
-    id: 1,
-    name: "Marwen Said",
-    avatar:
-      "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    date: "22 Jan 2024",
-    time: "12:24 pm",
-    duration: "35 min",
-  },
-  {
-    id: 2,
-    name: "Mariem Routi",
-    avatar:
-      "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    date: "20 Jan 2024",
-    time: "12:24 pm",
-    duration: "35 min",
-  },
-  {
-    id: 3,
-    name: "Ahmed Bourat",
-    avatar:
-      "https://images.pexels.com/photos/5452201/pexels-photo-5452201.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    date: "24 Jan 2024",
-    time: "12:24 pm",
-    duration: "35 min",
-  },
-  {
-    id: 4,
-    name: "Hassen Louati",
-    avatar:
-      "https://images.pexels.com/photos/5452274/pexels-photo-5452274.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    date: "26 Jan 2024",
-    time: "12:24 pm",
-    duration: "35 min",
-  },
-  {
-    id: 5,
-    name: "Laila Hamza",
-    avatar:
-      "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    date: "18 Jan 2024",
-    time: "12:24 pm",
-    duration: "35 min",
-  },
-  {
-    id: 6,
-    name: "Sami Ouni",
-    avatar:
-      "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    date: "28 Jan 2024",
-    time: "12:24 pm",
-    duration: "35 min",
-  },
-  {
-    id: 7,
-    name: "Sofien Jlassi",
-    avatar:
-      "https://images.pexels.com/photos/5452201/pexels-photo-5452201.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    date: "16 Jan 2024",
-    time: "12:24 pm",
-    duration: "35 min",
-  },
-  {
-    id: 8,
-    name: "Nada Haji",
-    avatar:
-      "https://images.pexels.com/photos/5452274/pexels-photo-5452274.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    date: "16 Jan 2024",
-    time: "12:24 pm",
-    duration: "35 min",
-  },
-  {
-    id: 9,
-    name: "Sirine Jablon",
-    avatar:
-      "https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    date: "16 Jan 2024",
-    time: "12:24 pm",
-    duration: "35 min",
-  },
-  {
-    id: 10,
-    name: "Ali Mouradi",
-    avatar:
-      "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-    date: "16 Jan 2024",
-    time: "12:24 pm",
-    duration: "35 min",
-  },
-];
-
 export function ConsultationHistoryContent() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [duration, setDuration] = useState("Duration");
   const [age, setAge] = useState("Age");
   const [gender, setGender] = useState("Gender");
   const [tableView, setTableView] = useState("Table view");
+  const [consultations, setConsultations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchConsultations();
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchConsultations();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, duration, age, gender]);
+
+  const fetchConsultations = async () => {
+    try {
+      setError(null);
+      const params: any = {
+        status: "completed",
+      };
+
+      if (searchTerm) params.search = searchTerm;
+
+      const response = await consultationsAPI.getConsultations(params);
+      setConsultations(response.data.data.consultations || []);
+    } catch (error) {
+      console.error("Failed to fetch consultations:", error);
+      setError("Failed to load consultations");
+      setConsultations([]);
+      toast({
+        title: "Error",
+        description: "Failed to fetch consultations",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddNewConsultation = () => {
+    toast({
+      title: "Info",
+      description: "New consultations are created from appointments",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -128,11 +84,22 @@ export function ConsultationHistoryContent() {
               History consultation list
             </h1>
             <p className="text-sm text-gray-500">
-              10 New consultations were added yesterday
+              {
+                consultations.filter((c) => {
+                  const consultDate = new Date(c.createdAt);
+                  const yesterday = new Date();
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  return consultDate >= yesterday;
+                }).length
+              }{" "}
+              New consultations were added recently
             </p>
           </div>
         </div>
-        <Button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2">
+        <Button 
+          className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2"
+          onClick={handleAddNewConsultation}
+        >
           <span>Add new consultation</span>
           <Plus className="w-4 h-4" />
         </Button>
@@ -140,6 +107,18 @@ export function ConsultationHistoryContent() {
 
       {/* Main Content */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-gray-50">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center mb-6">
+            <p className="text-red-600 text-sm">{error}</p>
+            <Button
+              onClick={fetchConsultations}
+              className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+
         {/* Search and Filters */}
         <div className="flex items-center justify-between mb-6">
           {/* Search */}
@@ -158,7 +137,6 @@ export function ConsultationHistoryContent() {
             <Select value={duration} onValueChange={setDuration}>
               <SelectTrigger className="w-32 h-10 border-gray-200 rounded-lg text-sm">
                 <SelectValue />
-                <ChevronDown className="w-4 h-4 ml-2" />
               </SelectTrigger>
               <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
                 <SelectItem value="Duration">Duration</SelectItem>
@@ -171,7 +149,6 @@ export function ConsultationHistoryContent() {
             <Select value={age} onValueChange={setAge}>
               <SelectTrigger className="w-24 h-10 border-gray-200 rounded-lg text-sm">
                 <SelectValue />
-                <ChevronDown className="w-4 h-4 ml-2" />
               </SelectTrigger>
               <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
                 <SelectItem value="Age">Age</SelectItem>
@@ -184,7 +161,6 @@ export function ConsultationHistoryContent() {
             <Select value={gender} onValueChange={setGender}>
               <SelectTrigger className="w-28 h-10 border-gray-200 rounded-lg text-sm">
                 <SelectValue />
-                <ChevronDown className="w-4 h-4 ml-2" />
               </SelectTrigger>
               <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
                 <SelectItem value="Gender">Gender</SelectItem>
@@ -196,7 +172,6 @@ export function ConsultationHistoryContent() {
             <Select value={tableView} onValueChange={setTableView}>
               <SelectTrigger className="w-32 h-10 border-gray-200 rounded-lg text-sm">
                 <SelectValue />
-                <ChevronDown className="w-4 h-4 ml-2" />
               </SelectTrigger>
               <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
                 <SelectItem value="Table view">Table view</SelectItem>
@@ -209,7 +184,7 @@ export function ConsultationHistoryContent() {
 
         {/* Table Header */}
         <div className="grid grid-cols-5 gap-4 py-3 px-4 text-sm font-medium text-gray-500 border-b border-gray-200">
-          <div>Patient</div>
+          <div>Doctor</div>
           <div>Date</div>
           <div>Time</div>
           <div>Duration</div>
@@ -218,41 +193,55 @@ export function ConsultationHistoryContent() {
 
         {/* Table Rows */}
         <div className="space-y-1 mt-4">
-          {consultationData.map((consultation) => (
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            </div>
+          ) : consultations.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No consultations found
+            </div>
+          ) : (
+            consultations.map((consultation) => (
             <div
-              key={consultation.id}
+              key={consultation._id}
               className="grid grid-cols-5 gap-4 py-4 px-4 bg-white rounded-lg hover:bg-gray-50 transition-colors items-center"
             >
-              {/* Patient */}
+              {/* Doctor */}
               <div className="flex items-center space-x-3">
                 <Avatar className="w-10 h-10">
-                  <AvatarImage src={consultation.avatar} />
+                  <AvatarImage src={consultation.doctor?.user?.avatar} />
                   <AvatarFallback>
-                    {consultation.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
+                    {consultation.doctor?.user?.firstName?.[0]}
+                    {consultation.doctor?.user?.lastName?.[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="font-medium text-gray-900 text-sm">
-                    {consultation.name}
+                    Dr. {consultation.doctor?.user?.firstName} {consultation.doctor?.user?.lastName}
                   </p>
                   <p className="text-xs text-gray-500">
-                    See patient&apos;s profile
+                    {consultation.doctor?.specialization}
                   </p>
                 </div>
               </div>
 
               {/* Date */}
-              <div className="text-sm text-gray-600">{consultation.date}</div>
+              <div className="text-sm text-gray-600">
+                {new Date(consultation.startTime).toLocaleDateString()}
+              </div>
 
               {/* Time */}
-              <div className="text-sm text-gray-600">{consultation.time}</div>
+              <div className="text-sm text-gray-600">
+                {new Date(consultation.startTime).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
 
               {/* Duration */}
               <div className="text-sm text-gray-600">
-                {consultation.duration}
+                {consultation.duration || 0} min
               </div>
 
               {/* Consultation Report */}
@@ -261,12 +250,19 @@ export function ConsultationHistoryContent() {
                   variant="ghost"
                   size="sm"
                   className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
+                  onClick={() =>
+                    window.open(
+                      `/api/consultations/${consultation._id}/report`,
+                      "_blank"
+                    )
+                  }
                 >
                   <FileText className="w-4 h-4" />
                 </Button>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
     </div>

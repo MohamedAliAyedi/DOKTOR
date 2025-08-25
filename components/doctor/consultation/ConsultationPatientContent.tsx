@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { consultationsAPI, appointmentsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { PrescriptionModal } from "./PrescriptionModal";
+import { NewBillModal } from "../billing/NewBillModal";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import {
   Sparkles,
   Settings,
   X,
+  DollarSign,
 } from "lucide-react";
 
 export function ConsultationPatientContent() {

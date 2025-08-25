@@ -337,11 +337,11 @@ export function BillingContent() {
             </div>
           </div>
 
-          {/* Customer's Insurance */}
+          {/* Recent Bills */}
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-gray-50">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
-                Customer&apos;s Insurance
+                Recent Bills
               </h3>
               <Button variant="ghost" size="sm" className="text-gray-400">
                 •••
@@ -349,37 +349,25 @@ export function BillingContent() {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 bg-pink-500 rounded"></div>
-                  <span className="text-sm text-gray-700">CNAM</span>
+              {recentBills.slice(0, 5).map((bill) => (
+                <div key={bill._id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                    <span className="text-sm text-gray-700">
+                      {bill.patient?.user?.firstName} {bill.patient?.user?.lastName}
+                    </span>
+                  </div>
+                  <span className="text-sm text-gray-600">TND {bill.totalAmount}</span>
                 </div>
-                <span className="text-sm text-gray-600">75%</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 bg-pink-300 rounded"></div>
-                  <span className="text-sm text-gray-700">CNRPS</span>
-                </div>
-                <span className="text-sm text-gray-600">15%</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 bg-pink-200 rounded"></div>
-                  <span className="text-sm text-gray-700">UNRP</span>
-                </div>
-                <span className="text-sm text-gray-600">10%</span>
-              </div>
+              ))}
             </div>
           </div>
 
-          {/* Customer's Gender */}
+          {/* Payment Methods */}
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-gray-50">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
-                Customer&apos;s Gender
+                Payment Methods
               </h3>
               <Button variant="ghost" size="sm" className="text-gray-400">
                 •••
@@ -389,18 +377,26 @@ export function BillingContent() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Male</span>
+                  <div className="w-4 h-4 bg-green-500 rounded"></div>
+                  <span className="text-sm text-gray-700">Cash</span>
                 </div>
-                <span className="text-sm text-gray-600">56%</span>
+                <span className="text-sm text-gray-600">45%</span>
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 bg-pink-500 rounded-full"></div>
-                  <span className="text-sm text-gray-700">Female</span>
+                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                  <span className="text-sm text-gray-700">Card</span>
                 </div>
-                <span className="text-sm text-gray-600">44%</span>
+                <span className="text-sm text-gray-600">35%</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-4 h-4 bg-purple-500 rounded"></div>
+                  <span className="text-sm text-gray-700">Bank Transfer</span>
+                </div>
+                <span className="text-sm text-gray-600">20%</span>
               </div>
             </div>
           </div>

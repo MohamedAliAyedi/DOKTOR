@@ -32,9 +32,11 @@ interface BillItem {
 interface NewBillModalProps {
   isOpen: boolean;
   onClose: () => void;
+  appointmentId?: string;
+  patientId?: string;
 }
 
-export function NewBillModal({ isOpen, onClose }: NewBillModalProps) {
+export function NewBillModal({ isOpen, onClose, appointmentId, patientId }: NewBillModalProps) {
   const [patient, setPatient] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [billType, setBillType] = useState("consultation");
@@ -50,6 +52,9 @@ export function NewBillModal({ isOpen, onClose }: NewBillModalProps) {
     if (isOpen) {
       fetchPatients();
       fetchServices();
+      if (patientId) {
+        setPatient(patientId);
+      }
     }
   }, [isOpen]);
 
@@ -123,6 +128,7 @@ export function NewBillModal({ isOpen, onClose }: NewBillModalProps) {
     try {
       await billingAPI.createBill({
         patientId: patient,
+        appointmentId: appointmentId,
         billType,
         items,
         paymentMethod,

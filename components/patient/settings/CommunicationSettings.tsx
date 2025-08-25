@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 
 export function CommunicationSettings() {
+  const { user, updateProfile }: any = useAuth();
+  const { toast } = useToast();
   const [emailSettings, setEmailSettings] = useState({
     notifications: true,
     newsletterSubscriptions: true,
@@ -19,6 +25,47 @@ export function CommunicationSettings() {
     secretary: true,
     otherDoctor: true,
   });
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.preferences?.communication) {
+      const comm = user.preferences.communication;
+      setEmailSettings(comm.email || emailSettings);
+      setSmsSettings(comm.sms || smsSettings);
+      setVideoCallSettings(comm.videoCall || videoCallSettings);
+    }
+  }, [user]);
+
+  const handleSaveChanges = async () => {
+    setIsLoading(true);
+    try {
+      await updateProfile({
+        preferences: {
+          ...user?.preferences,
+          communication: {
+            email: emailSettings,
+            sms: smsSettings,
+            videoCall: videoCallSettings,
+          },
+        },
+      });
+
+      toast({
+        title: "Success",
+        description: "Communication settings updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description:
+          error.response?.data?.message ||
+          "Failed to update communication settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -127,7 +174,7 @@ export function CommunicationSettings() {
         </h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">Patient</span>
+            <span className="text-sm text-gray-700">Doctor</span>
             <Switch
               checked={videoCallSettings.patient}
               onCheckedChange={(checked) =>
@@ -153,7 +200,7 @@ export function CommunicationSettings() {
             />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">Other Doctor</span>
+            <span className="text-sm text-gray-700">Other Patients</span>
             <Switch
               checked={videoCallSettings.otherDoctor}
               onCheckedChange={(checked) =>
@@ -166,6 +213,17 @@ export function CommunicationSettings() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-center">
+        <Button
+          className="bg-blue-500 hover:bg-blue-600 text-white px-16 py-3 h-12 rounded-full font-medium"
+          onClick={handleSaveChanges}
+          disabled={isLoading}
+        >
+          {isLoading ? "Saving..." : "Save changes"}
+        </Button>
       </div>
     </div>
   );

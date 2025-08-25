@@ -1,9 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { notificationsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export function NotificationSettings() {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [emailNotificationFreq, setEmailNotificationFreq] = useState("never");
   const [emailNewsUpdates, setEmailNewsUpdates] = useState({
     tipsAndTricks: true,
@@ -13,12 +20,108 @@ export function NotificationSettings() {
     platformChangelog: true,
   });
   const [signInNotifications, setSignInNotifications] = useState("most-secure");
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    email: true,
+    sms: true,
+    push: true,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchNotificationPreferences();
+  }, []);
+
+  const fetchNotificationPreferences = async () => {
+    try {
+      const response = await notificationsAPI.getNotificationPreferences();
+      const prefs = response.data.data.preferences;
+      setNotificationPreferences(prefs);
+    } catch (error) {
+      console.error('Failed to fetch notification preferences:', error);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    setIsLoading(true);
+    try {
+      await notificationsAPI.updateNotificationPreferences(notificationPreferences);
+
+      toast({
+        title: "Success",
+        description: "Notification settings updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update notification settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
       <h2 className="text-lg font-semibold text-pink-500">
         Notifications settings
       </h2>
+
+      {/* Basic Notification Preferences */}
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-base font-medium text-gray-900 mb-2">
+            Notification Channels
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Choose how you want to receive notifications from DOKTOR.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-medium text-gray-700">Email Notifications</span>
+              <p className="text-xs text-gray-500">Receive notifications via email</p>
+            </div>
+            <Checkbox
+              checked={notificationPreferences.email}
+              onCheckedChange={(checked) =>
+                setNotificationPreferences(prev => ({ ...prev, email: checked as boolean }))
+              }
+              className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-medium text-gray-700">SMS Notifications</span>
+              <p className="text-xs text-gray-500">Receive notifications via SMS</p>
+            </div>
+            <Checkbox
+              checked={notificationPreferences.sms}
+              onCheckedChange={(checked) =>
+                setNotificationPreferences(prev => ({ ...prev, sms: checked as boolean }))
+              }
+              className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-medium text-gray-700">Push Notifications</span>
+              <p className="text-xs text-gray-500">Receive push notifications in the app</p>
+            </div>
+            <Checkbox
+              checked={notificationPreferences.push}
+              onCheckedChange={(checked) =>
+                setNotificationPreferences(prev => ({ ...prev, push: checked as boolean }))
+              }
+              className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Email Notifications */}
       <div className="space-y-6">
@@ -27,7 +130,7 @@ export function NotificationSettings() {
             Email Notifications
           </h3>
           <p className="text-sm text-gray-600 mb-4">
-            When you&apos;re busy or not online, Substance can send you email
+            When you&apos;re busy or not online, DOKTOR can send you email
             notifications for any new direct messages or mentions of your name.
           </p>
         </div>
@@ -51,7 +154,7 @@ export function NotificationSettings() {
                 htmlFor="email-notifications"
                 className="text-sm text-gray-700"
               >
-                Send me email notifications:
+                Send me email notifications
               </label>
             </div>
             <div className="flex items-center space-x-3">
@@ -94,7 +197,7 @@ export function NotificationSettings() {
           </h3>
           <p className="text-sm text-gray-600 mb-4">
             From time to time, we&apos;d like to send you emails with
-            interesting news about Cuboid and your workspace. You can choose
+            interesting news about DOKTOR and your health. You can choose
             which of these updates you&apos;d like to receive:
           </p>
         </div>
@@ -107,12 +210,12 @@ export function NotificationSettings() {
             {
               key: "developerNewsletter",
               label:
-                "Cuboid Developer Newsletter: Best practices for connecting your work to Substance via our platform",
+                "DOKTOR Health Newsletter: Best practices for maintaining your health",
             },
             {
               key: "platformChangelog",
               label:
-                "Cuboid Platform Changelog: Stay in the know when we make updates to our APIs",
+                "DOKTOR Platform Updates: Stay in the know when we make updates to our platform",
             },
           ].map((item) => (
             <div key={item.key} className="flex items-start space-x-3">
@@ -143,7 +246,7 @@ export function NotificationSettings() {
             Sign-in Notifications
           </h3>
           <p className="text-sm text-gray-600 mb-4">
-            These emails help keep your Substance account secure. If you
+            These emails help keep your DOKTOR account secure. If you
             haven&apos;t already, you should also enable two-factor
             authentication.
           </p>
@@ -168,7 +271,7 @@ export function NotificationSettings() {
                 Most secure
               </label>
               <p className="text-sm text-gray-600 mt-1">
-                Receive an email anytime someone signs in to your Cuboid account
+                Receive an email anytime someone signs in to your DOKTOR account
                 from an unrecognized device.
               </p>
             </div>
@@ -216,6 +319,17 @@ export function NotificationSettings() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-center">
+        <Button 
+          className="bg-blue-500 hover:bg-blue-600 text-white px-16 py-3 h-12 rounded-full font-medium"
+          onClick={handleSaveChanges}
+          disabled={isLoading}
+        >
+          {isLoading ? "Saving..." : "Save changes"}
+        </Button>
       </div>
     </div>
   );

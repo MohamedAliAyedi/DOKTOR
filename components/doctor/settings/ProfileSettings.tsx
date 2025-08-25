@@ -67,6 +67,7 @@ export function ProfileSettings() {
       await doctorsAPI.updateDoctorProfile({
         licenseNumber: licenceId,
         clinicInfo: {
+          name: `${firstName} ${lastName} Medical Center`,
           address: {
             street: address
           }

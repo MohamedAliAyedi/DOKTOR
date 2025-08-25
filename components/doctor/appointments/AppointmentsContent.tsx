@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { appointmentsAPI } from "@/lib/api";
+import { appointmentsAPI, doctorsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,7 @@ import {
   DraggableLocation,
 } from "@hello-pangea/dnd";
 import { AddUnavailabilityModal } from "./AddUnavailabilityModal";
+import { AppointmentDetailsModal } from "./AppointmentDetailsModal";
 
 // Types
 type Appointment = {
@@ -37,6 +38,9 @@ type Appointment = {
   color: string;
   patient?: string;
   duration?: number; // in minutes
+  patientName?: string;
+  reason?: string;
+  status?: string;
 };
 
 type CalendarDay = {
@@ -46,120 +50,6 @@ type CalendarDay = {
   isCurrentMonth: boolean;
   isToday: boolean;
 };
-
-// Sample appointment data
-const generateAppointmentData = () => ({
-  "2025-10-01": [
-    {
-      id: "1",
-      type: "FINAL EXAMINATION",
-      time: "9:00",
-      color: "bg-yellow-400",
-      patient: "JC",
-      duration: 60,
-    },
-  ],
-  "2025-10-02": [
-    {
-      id: "2",
-      type: "FINAL EXAMINATION",
-      time: "9:00",
-      color: "bg-yellow-400",
-      patient: "JC",
-      duration: 60,
-    },
-  ],
-  "2025-10-03": [
-    {
-      id: "3",
-      type: "FINAL EXAMINATION",
-      time: "9:00",
-      color: "bg-yellow-400",
-      patient: "JC",
-      duration: 60,
-    },
-  ],
-  "2025-10-04": [
-    {
-      id: "4",
-      type: "RADIO INJECTION",
-      time: "12:00",
-      color: "bg-blue-500",
-      patient: "",
-      duration: 30,
-    },
-  ],
-  "2025-10-05": [
-    {
-      id: "5",
-      type: "ROUTINE CHECKUP",
-      time: "4:00",
-      color: "bg-pink-500",
-      patient: "",
-      duration: 45,
-    },
-  ],
-  "2025-10-06": [
-    {
-      id: "6",
-      type: "LIVER STENT",
-      time: "2:00",
-      color: "bg-purple-500",
-      patient: "",
-      duration: 90,
-    },
-  ],
-  "2025-10-15": [
-    {
-      id: "7",
-      type: "WALK-IN FEVER",
-      time: "5:00",
-      color: "bg-blue-400",
-      patient: "S+",
-      duration: 30,
-    },
-  ],
-  "2025-10-16": [
-    {
-      id: "8",
-      type: "LIVER ATC & ROUTINE CHECKUP",
-      time: "4:00",
-      color: "bg-pink-500",
-      patient: "",
-      duration: 60,
-    },
-  ],
-  "2025-10-18": [
-    {
-      id: "9",
-      type: "HAND INFECTION",
-      time: "1:00",
-      color: "bg-yellow-500",
-      patient: "",
-      duration: 45,
-    },
-  ],
-  "2025-10-21": [
-    {
-      id: "10",
-      type: "URINE BOOST",
-      time: "5:30",
-      color: "bg-purple-400",
-      patient: "",
-      duration: 30,
-    },
-  ],
-  "2025-10-25": [
-    {
-      id: "11",
-      type: "URINE VISIT & ROUTINE CHECKUP",
-      time: "8:00",
-      color: "bg-pink-500",
-      patient: "",
-      duration: 60,
-    },
-  ],
-});
 
 const daysOfWeek = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const monthNames = [
@@ -184,66 +74,119 @@ export function AppointmentsContent() {
   const [viewMode, setViewMode] = useState<"DAY" | "WEEK" | "MONTH">("MONTH");
   const [isUnavailabilityModalOpen, setIsUnavailabilityModalOpen] =
     useState(false);
-  const [appointmentData, setAppointmentData] = useState<Record<string, Appointment[]>>({});
+  const [appointmentData, setAppointmentData] = useState<
+    Record<string, Appointment[]>
+  >({});
   const [selectedDay, setSelectedDay] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
+  const [unavailabilityPeriods, setUnavailabilityPeriods] = useState<any[]>([]);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
 
   const calendarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchAppointments();
+    fetchUnavailability();
   }, [currentDate, viewMode]);
 
   const fetchAppointments = async () => {
     try {
-      const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-      
+      const startDate = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        1
+      );
+      const endDate = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        0
+      );
+
       const response = await appointmentsAPI.getAppointments({
         startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
+        endDate: endDate.toISOString(),
       });
-      
+
       const appointments = response.data.data.appointments || [];
       const groupedAppointments: Record<string, Appointment[]> = {};
-      
+
       appointments.forEach((apt: any) => {
-        const dateKey = new Date(apt.scheduledDate).toISOString().split('T')[0];
+        const dateKey = new Date(apt.scheduledDate).toISOString().split("T")[0];
         if (!groupedAppointments[dateKey]) {
           groupedAppointments[dateKey] = [];
         }
-        
+
         groupedAppointments[dateKey].push({
           id: apt._id,
           type: apt.appointmentType.toUpperCase(),
           time: apt.scheduledTime.start,
           color: getAppointmentColor(apt.appointmentType),
-          patient: apt.patient?.user?.firstName?.[0] + apt.patient?.user?.lastName?.[0] || '',
-          duration: apt.duration
+          patient:
+            apt.patient?.user?.firstName?.[0] +
+              apt.patient?.user?.lastName?.[0] || "",
+          duration: apt.duration,
+          patientName: `${apt.patient?.user?.firstName} ${apt.patient?.user?.lastName}`,
+          reason: apt.reason,
+          status: apt.status,
         });
       });
-      
+
       setAppointmentData(groupedAppointments);
     } catch (error) {
-      console.error('Failed to fetch appointments:', error);
+      console.error("Failed to fetch appointments:", error);
       setAppointmentData({});
+    }
+  };
+
+  const fetchUnavailability = async () => {
+    try {
+      const response = await doctorsAPI.getDoctorProfile();
+      const doctor = response.data.data.doctor;
+      setUnavailabilityPeriods(doctor?.unavailability || []);
+    } catch (error) {
+      console.error("Failed to fetch unavailability:", error);
+      setUnavailabilityPeriods([]);
     }
   };
 
   const getAppointmentColor = (type: string) => {
     const colors: Record<string, string> = {
-      'consultation': 'bg-blue-500',
-      'follow-up': 'bg-green-500',
-      'routine-checkup': 'bg-pink-500',
-      'urgent-care': 'bg-red-500',
-      'virtual': 'bg-purple-500',
-      'examination': 'bg-yellow-400'
+      consultation: "bg-blue-500",
+      "follow-up": "bg-green-500",
+      "routine-checkup": "bg-pink-500",
+      "urgent-care": "bg-red-500",
+      virtual: "bg-purple-500",
+      examination: "bg-yellow-400",
     };
-    return colors[type] || 'bg-gray-500';
+    return colors[type] || "bg-gray-500";
   };
+
+  const isDateUnavailable = (dateKey: string) => {
+    const date = new Date(dateKey);
+    return unavailabilityPeriods.some((period) => {
+      const startDate = new Date(period.startDate);
+      const endDate = new Date(period.endDate);
+      return date >= startDate && date <= endDate;
+    });
+  };
+
+  const handleAppointmentClick = (
+    appointment: Appointment,
+    dateKey: string
+  ) => {
+    const appointmentDetails = {
+      ...appointment,
+      date: dateKey,
+      fullPatientName: appointment.patientName || "Unknown Patient",
+    };
+    setSelectedAppointment(appointmentDetails);
+    setIsAppointmentModalOpen(true);
+  };
+
   // Generate calendar days for month view
   const generateCalendarDays = (): CalendarDay[][] => {
     const year = currentDate.getFullYear();
@@ -405,15 +348,15 @@ export function AppointmentsContent() {
         // Update appointment in backend
         await appointmentsAPI.updateAppointment(movedAppointment.id, {
           scheduledDate: destDateKey,
-          scheduledTime: { start: movedAppointment.time, end: "10:00" } // You might want to calculate this
+          scheduledTime: { start: movedAppointment.time, end: "10:00" }, // You might want to calculate this
         });
-        
+
         setAppointmentData({
           ...appointmentData,
           [sourceDateKey]: sourceAppointments,
           [destDateKey]: destAppointments,
         });
-        
+
         toast({
           title: "Success",
           description: "Appointment moved successfully",
@@ -424,7 +367,7 @@ export function AppointmentsContent() {
           description: "Failed to move appointment",
           variant: "destructive",
         });
-        
+
         // Revert the change
         fetchAppointments();
       }
@@ -484,6 +427,10 @@ export function AppointmentsContent() {
                         dayData.dateKey === selectedDay
                           ? "ring-2 ring-pink-500"
                           : ""
+                      } ${
+                        isDateUnavailable(dayData.dateKey)
+                          ? "bg-red-50 border-red-200"
+                          : ""
                       }`}
                     >
                       {/* Date Number */}
@@ -501,6 +448,11 @@ export function AppointmentsContent() {
                         >
                           {dayData.date.getDate()}
                         </span>
+                        {isDateUnavailable(dayData.dateKey) && (
+                          <span className="text-xs text-red-500 font-medium">
+                            Unavailable
+                          </span>
+                        )}
                         {dayData.isCurrentMonth && (
                           <Button
                             variant="ghost"
@@ -525,11 +477,18 @@ export function AppointmentsContent() {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAppointmentClick(
+                                    appointment,
+                                    dayData.dateKey
+                                  );
+                                }}
                                 className={`${
                                   appointment.color
                                 } text-white text-xs px-2 py-1 rounded-md relative ${
                                   isDragging ? "shadow-lg" : ""
-                                }`}
+                                } cursor-pointer hover:opacity-90`}
                               >
                                 <div className="flex items-start">
                                   <GripVertical className="w-3 h-3 mr-1 opacity-70" />
@@ -1003,6 +962,17 @@ export function AppointmentsContent() {
       <AddUnavailabilityModal
         isOpen={isUnavailabilityModalOpen}
         onClose={() => setIsUnavailabilityModalOpen(false)}
+      />
+
+      {/* Appointment Details Modal */}
+      <AppointmentDetailsModal
+        isOpen={isAppointmentModalOpen}
+        onClose={() => setIsAppointmentModalOpen(false)}
+        appointment={selectedAppointment}
+        onUpdate={() => {
+          fetchAppointments();
+          setIsAppointmentModalOpen(false);
+        }}
       />
     </DragDropContext>
   );

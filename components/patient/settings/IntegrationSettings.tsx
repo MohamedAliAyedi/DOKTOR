@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 
 const integrationServices = [
@@ -8,7 +12,6 @@ const integrationServices = [
     id: "dropbox",
     name: "Dropbox",
     description: "Integrate Projects Management",
-    icon: "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop",
     color: "bg-blue-500",
     isEnabled: false,
   },
@@ -16,7 +19,6 @@ const integrationServices = [
     id: "slack",
     name: "Slack",
     description: "Integrate Projects Discussions",
-    icon: "https://images.pexels.com/photos/5452201/pexels-photo-5452201.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop",
     color: "bg-purple-500",
     isEnabled: true,
   },
@@ -24,14 +26,42 @@ const integrationServices = [
     id: "google",
     name: "Google",
     description: "Plan properly your workflow",
-    icon: "https://images.pexels.com/photos/5452274/pexels-photo-5452274.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop",
     color: "bg-red-500",
     isEnabled: true,
+  },
+  {
+    id: "calendar",
+    name: "Google Calendar",
+    description: "Sync appointments with Google Calendar",
+    color: "bg-green-500",
+    isEnabled: false,
+  },
+  {
+    id: "zoom",
+    name: "Zoom",
+    description: "Enable video consultations via Zoom",
+    color: "bg-blue-600",
+    isEnabled: false,
   },
 ];
 
 export function IntegrationSettings() {
+  const { user, updateProfile }: any = useAuth();
+  const { toast } = useToast();
   const [integrations, setIntegrations] = useState(integrationServices);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.preferences?.integrations) {
+      const userIntegrations = user.preferences.integrations;
+      setIntegrations((prev) =>
+        prev.map((integration) => ({
+          ...integration,
+          isEnabled: userIntegrations[integration.id] || integration.isEnabled,
+        }))
+      );
+    }
+  }, [user]);
 
   const handleToggleIntegration = (id: string, enabled: boolean) => {
     setIntegrations((prev) =>
@@ -41,6 +71,38 @@ export function IntegrationSettings() {
           : integration
       )
     );
+  };
+
+  const handleSaveChanges = async () => {
+    setIsLoading(true);
+    try {
+      const integrationSettings = integrations.reduce((acc, integration) => {
+        acc[integration.id] = integration.isEnabled;
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      await updateProfile({
+        preferences: {
+          ...user?.preferences,
+          integrations: integrationSettings,
+        },
+      });
+
+      toast({
+        title: "Success",
+        description: "Integration settings updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description:
+          error.response?.data?.message ||
+          "Failed to update integration settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -92,6 +154,24 @@ export function IntegrationSettings() {
                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                     </svg>
                   )}
+                  {integration.id === "calendar" && (
+                    <svg
+                      className="w-6 h-6 text-white"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" />
+                    </svg>
+                  )}
+                  {integration.id === "zoom" && (
+                    <svg
+                      className="w-6 h-6 text-white"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                    </svg>
+                  )}
                 </div>
 
                 {/* Service Info */}
@@ -116,6 +196,17 @@ export function IntegrationSettings() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-center">
+        <Button
+          className="bg-blue-500 hover:bg-blue-600 text-white px-16 py-3 h-12 rounded-full font-medium"
+          onClick={handleSaveChanges}
+          disabled={isLoading}
+        >
+          {isLoading ? "Saving..." : "Save changes"}
+        </Button>
       </div>
     </div>
   );
