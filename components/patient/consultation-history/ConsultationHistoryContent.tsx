@@ -40,11 +40,20 @@ export function ConsultationHistoryContent() {
   const fetchConsultations = async () => {
     try {
       setError(null);
-      const params: any = {
-        status: "completed",
-      };
+      const params: any = {};
 
       if (searchTerm) params.search = searchTerm;
+      if (duration !== "Duration") {
+        // Add duration filter logic
+        const durationMap: any = {
+          "30min": { duration: 30 },
+          "45min": { duration: 45 },
+          "60min": { duration: 60 }
+        };
+        if (durationMap[duration]) {
+          Object.assign(params, durationMap[duration]);
+        }
+      }
 
       const response = await consultationsAPI.getConsultations(params);
       setConsultations(response.data.data.consultations || []);
@@ -251,10 +260,7 @@ export function ConsultationHistoryContent() {
                   size="sm"
                   className="w-8 h-8 p-0 text-blue-500 hover:bg-blue-50"
                   onClick={() =>
-                    window.open(
-                      `/api/consultations/${consultation._id}/report`,
-                      "_blank"
-                    )
+                    window.open(`/doctor/consultation/report/${consultation._id}`, "_blank")
                   }
                 >
                   <FileText className="w-4 h-4" />

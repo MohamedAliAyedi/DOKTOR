@@ -69,8 +69,14 @@ export function ProfileSettings() {
         clinicInfo: {
           name: `${firstName} ${lastName} Medical Center`,
           address: {
-            street: address
-          }
+            street: address,
+            city: "Tunis",
+            state: "Tunis",
+            zipCode: "1000",
+            country: "Tunisia"
+          },
+          phoneNumber: phoneNumber,
+          email: email
         }
       });
 

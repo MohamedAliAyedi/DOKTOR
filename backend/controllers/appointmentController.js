@@ -64,6 +64,8 @@ const getAppointments = catchAsync(async (req, res, next) => {
     .populate("doctor", "user specialization")
     .populate("patient.user", "firstName lastName avatar")
     .populate("doctor.user", "firstName lastName avatar")
+    .populate("consultation")
+    .populate("billing")
     .sort({ scheduledDate: 1, "scheduledTime.start": 1 })
     .limit(limit * 1)
     .skip((page - 1) * limit);

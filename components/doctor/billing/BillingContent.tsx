@@ -119,11 +119,13 @@ export function BillingContent() {
     try {
       setError(null);
       setIsLoading(true);
-      const [statsResponse, billsResponse, revenueResponse] = await Promise.all([
-        billingAPI.getBillingStatistics(),
-        billingAPI.getBills({ limit: 10 }),
-        billingAPI.getRevenueReport({ period: selectedPeriod.toLowerCase() })
-      ]);
+      const [statsResponse, billsResponse, revenueResponse] = await Promise.all(
+        [
+          billingAPI.getBillingStatistics(),
+          billingAPI.getBills({ limit: 10 }),
+          billingAPI.getRevenueReport({ period: selectedPeriod.toLowerCase() }),
+        ]
+      );
 
       setBillingStats(statsResponse.data.data.statistics || {});
       setRecentBills(billsResponse.data.data.bills || []);
@@ -131,8 +133,21 @@ export function BillingContent() {
       // Process revenue data for charts
       const revenue = revenueResponse.data.data.revenueData || [];
       const labels = revenue.map((item: any) => {
-        if (selectedPeriod === 'Monthly') {
-          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        if (selectedPeriod === "Monthly") {
+          const months = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+          ];
           return months[item._id - 1] || `Month ${item._id}`;
         }
         return `Period ${item._id}`;
@@ -154,28 +169,38 @@ export function BillingContent() {
       });
 
       // Income breakdown by service type
-      const breakdown = (billsResponse.data.data.bills || []).reduce((acc: any, bill: any) => {
-        const type = bill.billType || 'other';
-        acc[type] = (acc[type] || 0) + bill.totalAmount;
-        return acc;
-      }, {});
+      const breakdown = (billsResponse.data.data.bills || []).reduce(
+        (acc: any, bill: any) => {
+          const type = bill.billType || "other";
+          acc[type] = (acc[type] || 0) + bill.totalAmount;
+          return acc;
+        },
+        {}
+      );
 
       const breakdownData = {
-        labels: Object.keys(breakdown).map(key => key.charAt(0).toUpperCase() + key.slice(1)),
+        labels: Object.keys(breakdown).map(
+          (key) => key.charAt(0).toUpperCase() + key.slice(1)
+        ),
         datasets: [
           {
             data: Object.values(breakdown),
-            backgroundColor: ["#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#6b7280"],
+            backgroundColor: [
+              "#10b981",
+              "#f59e0b",
+              "#8b5cf6",
+              "#ef4444",
+              "#6b7280",
+            ],
             borderWidth: 0,
           },
         ],
       };
 
       setIncomeBreakdown(breakdownData);
-
     } catch (error) {
-      console.error('Failed to fetch billing data:', error);
-      setError('Failed to load billing data');
+      console.error("Failed to fetch billing data:", error);
+      setError("Failed to load billing data");
       // Set default empty data on error
       setBillingStats({});
       setRecentBills([]);
@@ -218,7 +243,7 @@ export function BillingContent() {
       <div className="space-y-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
           <p className="text-red-600 text-sm">{error}</p>
-          <Button 
+          <Button
             onClick={fetchBillingData}
             className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
           >
@@ -251,7 +276,9 @@ export function BillingContent() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm mb-2">Revenue this month</p>
-              <p className="text-3xl font-bold">TND {(billingStats.paidRevenue || 0).toLocaleString()}</p>
+              <p className="text-3xl font-bold">
+                TND {(billingStats.paidRevenue || 0).toLocaleString()}
+              </p>
               <p className="text-blue-200 text-sm mt-1">+8% from last month</p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -265,7 +292,9 @@ export function BillingContent() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-pink-100 text-sm mb-2">Pending payments</p>
-              <p className="text-3xl font-bold">TND {(billingStats.pendingRevenue || 0).toLocaleString()}</p>
+              <p className="text-3xl font-bold">
+                TND {(billingStats.pendingRevenue || 0).toLocaleString()}
+              </p>
               <p className="text-pink-200 text-sm mt-1">
                 {billingStats.pendingBills || 0} invoices awaiting payment
               </p>
@@ -281,7 +310,9 @@ export function BillingContent() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm mb-2">Paid invoices</p>
-              <p className="text-3xl font-bold">{billingStats.paidBills || 0}</p>
+              <p className="text-3xl font-bold">
+                {billingStats.paidBills || 0}
+              </p>
               <p className="text-blue-200 text-sm mt-1">
                 Out of {billingStats.totalBills || 0} total invoices
               </p>
@@ -317,15 +348,19 @@ export function BillingContent() {
                   {/* Patient */}
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium">
-                      {bill.patient?.user?.firstName?.[0]}{bill.patient?.user?.lastName?.[0]}
+                      {bill.patient?.user?.firstName?.[0]}
+                      {bill.patient?.user?.lastName?.[0]}
                     </div>
                     <span className="text-sm text-gray-900 font-medium">
-                      {bill.patient?.user?.firstName} {bill.patient?.user?.lastName}
+                      {bill.patient?.user?.firstName}{" "}
+                      {bill.patient?.user?.lastName}
                     </span>
                   </div>
 
                   {/* Payment */}
-                  <div className="text-sm text-gray-600">TND {bill.totalAmount}</div>
+                  <div className="text-sm text-gray-600">
+                    TND {bill.totalAmount}
+                  </div>
 
                   {/* Service */}
                   <div className="text-sm text-gray-600">{bill.billType}</div>
@@ -350,14 +385,20 @@ export function BillingContent() {
 
             <div className="space-y-3">
               {recentBills.slice(0, 5).map((bill) => (
-                <div key={bill._id} className="flex items-center justify-between">
+                <div
+                  key={bill._id}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center space-x-3">
                     <div className="w-4 h-4 bg-blue-500 rounded"></div>
                     <span className="text-sm text-gray-700">
-                      {bill.patient?.user?.firstName} {bill.patient?.user?.lastName}
+                      {bill.patient?.user?.firstName}{" "}
+                      {bill.patient?.user?.lastName}
                     </span>
                   </div>
-                  <span className="text-sm text-gray-600">TND {bill.totalAmount}</span>
+                  <span className="text-sm text-gray-600">
+                    TND {bill.totalAmount}
+                  </span>
                 </div>
               ))}
             </div>
@@ -375,29 +416,57 @@ export function BillingContent() {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 bg-green-500 rounded"></div>
-                  <span className="text-sm text-gray-700">Cash</span>
-                </div>
-                <span className="text-sm text-gray-600">45%</span>
-              </div>
+              {recentBills.length > 0 ? (
+                (() => {
+                  const paymentMethods = recentBills.reduce(
+                    (acc: any, bill: any) => {
+                      const method = bill.paymentMethod || "unknown";
+                      acc[method] = (acc[method] || 0) + 1;
+                      return acc;
+                    },
+                    {}
+                  );
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                  <span className="text-sm text-gray-700">Card</span>
-                </div>
-                <span className="text-sm text-gray-600">35%</span>
-              </div>
+                  const total = Object.values(paymentMethods).reduce(
+                    (sum: any, count: any) => sum + count,
+                    0
+                  );
+                  const colors = [
+                    "bg-green-500",
+                    "bg-blue-500",
+                    "bg-purple-500",
+                    "bg-yellow-500",
+                    "bg-red-500",
+                  ];
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 bg-purple-500 rounded"></div>
-                  <span className="text-sm text-gray-700">Bank Transfer</span>
+                  return Object.entries(paymentMethods).map(
+                    ([method, count]: any, index) => (
+                      <div
+                        key={method}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className={`w-4 h-4 ${
+                              colors[index % colors.length]
+                            } rounded`}
+                          ></div>
+                          <span className="text-sm text-gray-700 capitalize">
+                            {method}
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-600">
+                          {Math.round((count / Number(total)) * 100)}%
+                        </span>
+                      </div>
+                    )
+                  );
+                })()
+              ) : (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  No payment data available
                 </div>
-                <span className="text-sm text-gray-600">20%</span>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -423,7 +492,9 @@ export function BillingContent() {
             </div>
 
             <div className="mb-4">
-              <p className="text-2xl font-bold text-gray-900">TND {(billingStats.totalRevenue || 0).toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                TND {(billingStats.totalRevenue || 0).toLocaleString()}
+              </p>
               <p className="text-sm text-pink-500">+4% from last month</p>
             </div>
 
@@ -451,7 +522,9 @@ export function BillingContent() {
               )}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
-                  <p className="text-xl font-bold text-gray-900">TND {(billingStats.totalRevenue || 0).toLocaleString()}</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    TND {(billingStats.totalRevenue || 0).toLocaleString()}
+                  </p>
                   <p className="text-sm text-pink-500">
                     +2.1% from last quarter
                   </p>
@@ -463,9 +536,12 @@ export function BillingContent() {
               {incomeBreakdown.labels?.map((label: string, index: number) => (
                 <div key={label} className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <div 
+                    <div
                       className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: incomeBreakdown.datasets[0].backgroundColor[index] }}
+                      style={{
+                        backgroundColor:
+                          incomeBreakdown.datasets[0].backgroundColor[index],
+                      }}
                     ></div>
                     <span>{label}</span>
                   </div>

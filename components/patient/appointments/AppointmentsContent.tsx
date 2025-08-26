@@ -38,6 +38,9 @@ type Appointment = {
   color: string;
   patient?: string;
   duration?: number; // in minutes
+  patientName?: string;
+  doctorAvatar?: string;
+  doctorSpecialty?: string;
   doctorName?: string;
   reason?: string;
   status?: string;
@@ -50,120 +53,6 @@ type CalendarDay = {
   isCurrentMonth: boolean;
   isToday: boolean;
 };
-
-// Sample appointment data
-const generateAppointmentData = () => ({
-  "2025-10-01": [
-    {
-      id: "1",
-      type: "FINAL EXAMINATION",
-      time: "9:00",
-      color: "bg-yellow-400",
-      patient: "JC",
-      duration: 60,
-    },
-  ],
-  "2025-10-02": [
-    {
-      id: "2",
-      type: "FINAL EXAMINATION",
-      time: "9:00",
-      color: "bg-yellow-400",
-      patient: "JC",
-      duration: 60,
-    },
-  ],
-  "2025-10-03": [
-    {
-      id: "3",
-      type: "FINAL EXAMINATION",
-      time: "9:00",
-      color: "bg-yellow-400",
-      patient: "JC",
-      duration: 60,
-    },
-  ],
-  "2025-10-04": [
-    {
-      id: "4",
-      type: "RADIO INJECTION",
-      time: "12:00",
-      color: "bg-blue-500",
-      patient: "",
-      duration: 30,
-    },
-  ],
-  "2025-10-05": [
-    {
-      id: "5",
-      type: "ROUTINE CHECKUP",
-      time: "4:00",
-      color: "bg-pink-500",
-      patient: "",
-      duration: 45,
-    },
-  ],
-  "2025-10-06": [
-    {
-      id: "6",
-      type: "LIVER STENT",
-      time: "2:00",
-      color: "bg-purple-500",
-      patient: "",
-      duration: 90,
-    },
-  ],
-  "2025-10-15": [
-    {
-      id: "7",
-      type: "WALK-IN FEVER",
-      time: "5:00",
-      color: "bg-blue-400",
-      patient: "S+",
-      duration: 30,
-    },
-  ],
-  "2025-10-16": [
-    {
-      id: "8",
-      type: "LIVER ATC & ROUTINE CHECKUP",
-      time: "4:00",
-      color: "bg-pink-500",
-      patient: "",
-      duration: 60,
-    },
-  ],
-  "2025-10-18": [
-    {
-      id: "9",
-      type: "HAND INFECTION",
-      time: "1:00",
-      color: "bg-yellow-500",
-      patient: "",
-      duration: 45,
-    },
-  ],
-  "2025-10-21": [
-    {
-      id: "10",
-      type: "URINE BOOST",
-      time: "5:30",
-      color: "bg-purple-400",
-      patient: "",
-      duration: 30,
-    },
-  ],
-  "2025-10-25": [
-    {
-      id: "11",
-      type: "URINE VISIT & ROUTINE CHECKUP",
-      time: "8:00",
-      color: "bg-pink-500",
-      patient: "",
-      duration: 60,
-    },
-  ],
-});
 
 const daysOfWeek = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const monthNames = [
@@ -187,7 +76,9 @@ export function AppointmentsContent() {
   const [selectedMonth, setSelectedMonth] = useState("This month, October");
   const [viewMode, setViewMode] = useState<"DAY" | "WEEK" | "MONTH">("MONTH");
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
-  const [appointmentData, setAppointmentData] = useState<Record<string, Appointment[]>>({});
+  const [appointmentData, setAppointmentData] = useState<
+    Record<string, Appointment[]>
+  >({});
   const [selectedDay, setSelectedDay] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
@@ -204,60 +95,75 @@ export function AppointmentsContent() {
 
   const fetchAppointments = async () => {
     try {
-      const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-      
+      const startDate = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        1
+      );
+      const endDate = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        0
+      );
+
       const response = await appointmentsAPI.getAppointments({
         startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
+        endDate: endDate.toISOString(),
       });
-      
+
       const appointments = response.data.data.appointments || [];
       const groupedAppointments: Record<string, Appointment[]> = {};
-      
+
       appointments.forEach((apt: any) => {
-        const dateKey = new Date(apt.scheduledDate).toISOString().split('T')[0];
+        const dateKey = new Date(apt.scheduledDate).toISOString().split("T")[0];
         if (!groupedAppointments[dateKey]) {
           groupedAppointments[dateKey] = [];
         }
-        
+
         groupedAppointments[dateKey].push({
           id: apt._id,
           type: apt.appointmentType.toUpperCase(),
           time: apt.scheduledTime.start,
           color: getAppointmentColor(apt.appointmentType),
-          patient: apt.doctor?.user?.firstName?.[0] + apt.doctor?.user?.lastName?.[0] || 'DR',
+          patient:
+            apt.doctor?.user?.firstName?.[0] +
+              apt.doctor?.user?.lastName?.[0] || "DR",
           duration: apt.duration,
           doctorName: `${apt.doctor?.user?.firstName} ${apt.doctor?.user?.lastName}`,
+          doctorAvatar: apt.doctor?.user?.avatar,
+          doctorSpecialty: apt.doctor?.specialization,
           reason: apt.reason,
-          status: apt.status
+          status: apt.status,
         });
       });
-      
+
       setAppointmentData(groupedAppointments);
     } catch (error) {
-      console.error('Failed to fetch appointments:', error);
+      console.error("Failed to fetch appointments:", error);
       setAppointmentData({});
     }
   };
 
   const getAppointmentColor = (type: string) => {
     const colors: Record<string, string> = {
-      'consultation': 'bg-blue-500',
-      'follow-up': 'bg-green-500',
-      'routine-checkup': 'bg-pink-500',
-      'urgent-care': 'bg-red-500',
-      'virtual': 'bg-purple-500',
-      'examination': 'bg-yellow-400'
+      consultation: "bg-blue-500",
+      "follow-up": "bg-green-500",
+      "routine-checkup": "bg-pink-500",
+      "urgent-care": "bg-red-500",
+      virtual: "bg-purple-500",
+      examination: "bg-yellow-400",
     };
-    return colors[type] || 'bg-gray-500';
+    return colors[type] || "bg-gray-500";
   };
 
-  const handleAppointmentClick = (appointment: Appointment, dateKey: string) => {
+  const handleAppointmentClick = (
+    appointment: Appointment,
+    dateKey: string
+  ) => {
     const appointmentDetails = {
       ...appointment,
       date: dateKey,
-      fullDoctorName: appointment.doctorName || 'Unknown Doctor'
+      fullDoctorName: appointment.doctorName || "Unknown Doctor",
     };
     setSelectedAppointment(appointmentDetails);
     setIsAppointmentModalOpen(true);
@@ -424,15 +330,15 @@ export function AppointmentsContent() {
         // Update appointment in backend
         await appointmentsAPI.updateAppointment(movedAppointment.id, {
           scheduledDate: destDateKey,
-          scheduledTime: { start: movedAppointment.time, end: "10:00" }
+          scheduledTime: { start: movedAppointment.time, end: "10:00" },
         });
-        
+
         setAppointmentData({
           ...appointmentData,
           [sourceDateKey]: sourceAppointments,
           [destDateKey]: destAppointments,
         });
-        
+
         toast({
           title: "Success",
           description: "Appointment moved successfully",
@@ -443,7 +349,7 @@ export function AppointmentsContent() {
           description: "Failed to move appointment",
           variant: "destructive",
         });
-        
+
         // Revert the change
         fetchAppointments();
       }
@@ -546,7 +452,10 @@ export function AppointmentsContent() {
                                 {...provided.dragHandleProps}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleAppointmentClick(appointment, dayData.dateKey);
+                                  handleAppointmentClick(
+                                    appointment,
+                                    dayData.dateKey
+                                  );
                                 }}
                                 className={`${
                                   appointment.color
@@ -563,6 +472,11 @@ export function AppointmentsContent() {
                                     <div className="text-xs opacity-90">
                                       {appointment.time}
                                     </div>
+                                    {appointment.doctorName && (
+                                      <div className="text-xs opacity-90 truncate">
+                                        {appointment.doctorName}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                                 {appointment.patient && (
@@ -674,6 +588,11 @@ export function AppointmentsContent() {
                                   <div className="text-xs opacity-90">
                                     {appointment.time}
                                   </div>
+                                  {appointment.doctorName && (
+                                    <div className="text-xs opacity-90 truncate">
+                                      {appointment.doctorName}
+                                    </div>
+                                  )}
                                   {appointment.patient && (
                                     <div className="absolute top-0 right-0 w-4 h-4 bg-gray-800 text-white rounded-full flex items-center justify-center text-xs font-bold transform translate-x-1/2 -translate-y-1/2">
                                       {appointment.patient}
@@ -751,6 +670,11 @@ export function AppointmentsContent() {
                                       <div className="text-xs opacity-90">
                                         {appointment.time}
                                       </div>
+                                      {appointment.doctorName && (
+                                        <div className="text-xs opacity-90 truncate">
+                                          {appointment.doctorName}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                   {appointment.patient && (
@@ -965,6 +889,11 @@ export function AppointmentsContent() {
                         <div className="text-sm opacity-90">
                           {appointment.time}
                         </div>
+                        {appointment.doctorName && (
+                          <div className="text-sm opacity-90">
+                            Doctor: {appointment.doctorName}
+                          </div>
+                        )}
                         {appointment.patient && (
                           <div className="mt-2 text-sm">
                             <span className="font-medium">Patient:</span>{" "}
@@ -1022,7 +951,7 @@ export function AppointmentsContent() {
           )}
         </div>
       </div>
-      
+
       {/* Book Appointment Modal */}
       <BookAppointmentModal
         isOpen={isBookModalOpen}

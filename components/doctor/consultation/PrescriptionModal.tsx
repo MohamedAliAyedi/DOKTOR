@@ -128,8 +128,8 @@ export function PrescriptionModal({
           },
           frequency: med.frequency,
           duration: {
-            startDate: new Date(med.from),
-            endDate: new Date(med.to)
+            startDate: med.from,
+            endDate: med.to
           },
           timing: {
             beforeBreakfast: med.beforeBreakfast,

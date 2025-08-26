@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { consultationsAPI, appointmentsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { PrescriptionModal } from "./PrescriptionModal";
-import { NewBillModal } from "../billing/NewBillModal";
+import { CreateBillModal } from "./CreateBillModal";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,9 @@ export function ConsultationPatientContent() {
   const [messageForDoctor, setMessageForDoctor] = useState("");
   const [report, setReport] = useState("");
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -115,6 +117,7 @@ export function ConsultationPatientContent() {
   const handleSaveConsultation = async () => {
     if (!consultation) return;
 
+    setIsSaving(true);
     try {
       await consultationsAPI.updateConsultation(consultation._id, {
         symptoms: symptoms.map(name => ({ name, severity: 'moderate' })),
@@ -136,7 +139,13 @@ export function ConsultationPatientContent() {
         description: error.response?.data?.message || "Failed to save consultation",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  const handleCreateBill = () => {
+    setIsBillModalOpen(true);
   };
 
   if (isLoading) {
@@ -201,6 +210,13 @@ export function ConsultationPatientContent() {
               className="w-10 h-10 rounded-full border-gray-200 hover:bg-gray-50 p-0"
             >
               <Download className="w-4 h-4 text-blue-500" />
+            </Button>
+            <Button
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 flex items-center space-x-2"
+              onClick={handleCreateBill}
+            >
+              <DollarSign className="w-4 h-4" />
+              <span>Create Bill</span>
             </Button>
             <Button
               className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 flex items-center space-x-2"
@@ -357,9 +373,10 @@ export function ConsultationPatientContent() {
             variant="outline"
             className="bg-white border-blue-400 hover:bg-gray-50 px-6 py-3 flex items-center space-x-2"
             onClick={handleSaveConsultation}
+            disabled={isSaving}
           >
             <Settings className="w-4 h-4 text-blue-500" />
-            <span>Save consultation</span>
+            <span>{isSaving ? "Saving..." : "Save consultation"}</span>
           </Button>
           <Button
             onClick={handleCreatePrescription}
@@ -378,6 +395,15 @@ export function ConsultationPatientContent() {
         onSave={handleSavePrescription}
         patientId={patient?._id}
         consultationId={consultation?._id}
+      />
+
+      {/* Bill Modal */}
+      <CreateBillModal
+        isOpen={isBillModalOpen}
+        onClose={() => setIsBillModalOpen(false)}
+        appointmentId={appointment?._id}
+        consultationId={consultation?._id}
+        patientId={patient?._id}
       />
     </div>
   );

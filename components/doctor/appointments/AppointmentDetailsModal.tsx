@@ -147,7 +147,7 @@ export function AppointmentDetailsModal({
           <div className="bg-gray-50 rounded-2xl p-6 mb-6">
             <div className="flex items-center space-x-4">
               <Avatar className="w-16 h-16">
-                <AvatarImage src="https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face" />
+                <AvatarImage src={appointment.patientAvatar} />
                 <AvatarFallback>
                   {appointment.patient || appointment.fullPatientName?.split(' ').map((n: string) => n[0]).join('') || 'P'}
                 </AvatarFallback>
@@ -156,6 +156,7 @@ export function AppointmentDetailsModal({
                 <h3 className="text-lg font-semibold text-gray-900">
                   {appointment.fullPatientName || appointment.patientName || 'Patient'}
                 </h3>
+                <p className="text-sm text-gray-600">#{appointment.patientId || 'N/A'}</p>
                 <div className="flex items-center space-x-2 mt-1">
                   {getStatusBadge(appointment.status || 'scheduled')}
                   <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-100">

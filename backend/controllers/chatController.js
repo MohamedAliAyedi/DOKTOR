@@ -1,48 +1,48 @@
-const { Chat, Message } = require('../models/Chat');
-const User = require('../models/User');
-const { AppError } = require('../utils/appError');
-const { catchAsync } = require('../utils/catchAsync');
+const { Chat, Message } = require("../models/Chat");
+const User = require("../models/User");
+const { AppError } = require("../utils/appError");
+const { catchAsync } = require("../utils/catchAsync");
 
 // Get user's chats
 const getUserChats = catchAsync(async (req, res, next) => {
   const { page = 1, limit = 20, search } = req.query;
-  
+
   let query = {
-    'participants.user': req.user._id,
-    'participants.isActive': true,
-    isActive: true
+    "participants.user": req.user._id,
+    "participants.isActive": true,
+    isActive: true,
   };
 
   if (search) {
     query.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } }
+      { title: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
     ];
   }
 
   const chats = await Chat.find(query)
     .populate({
-      path: 'participants.user',
-      select: 'firstName lastName avatar role isActive',
-      match: { isActive: true }
+      path: "participants.user",
+      select: "firstName lastName avatar role isActive",
+      match: { isActive: true },
     })
-    .populate('lastMessage')
+    .populate("lastMessage")
     .sort({ lastActivity: -1 })
     .limit(limit * 1)
     .skip((page - 1) * limit);
 
   // Filter out chats where user population failed
-  const validChats = chats.filter(chat => 
-    chat.participants.every(p => p.user !== null)
+  const validChats = chats.filter((chat) =>
+    chat.participants.every((p) => p.user !== null)
   );
 
   // Add unread count for each chat
   for (let chat of validChats) {
     const unreadCount = await Message.countDocuments({
       chat: chat._id,
-      'readBy.user': { $ne: req.user._id },
+      "readBy.user": { $ne: req.user._id },
       sender: { $ne: req.user._id },
-      isDeleted: false
+      isDeleted: false,
     });
     chat.unreadCount = unreadCount;
   }
@@ -50,53 +50,53 @@ const getUserChats = catchAsync(async (req, res, next) => {
   const total = await Chat.countDocuments(query);
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
     results: validChats.length,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
       total,
-      pages: Math.ceil(total / limit)
+      pages: Math.ceil(total / limit),
     },
     data: {
-      chats: validChats
-    }
+      chats: validChats,
+    },
   });
 });
 
 // Create new chat
 const createChat = catchAsync(async (req, res, next) => {
-  const { participantIds, chatType = 'direct', title, description } = req.body;
+  const { participantIds, chatType = "direct", title, description } = req.body;
 
   if (!participantIds || participantIds.length === 0) {
-    return next(new AppError('At least one participant is required', 400));
+    return next(new AppError("At least one participant is required", 400));
   }
 
   // Verify all participants exist
-  const participants = await User.find({ 
+  const participants = await User.find({
     _id: { $in: participantIds },
-    isActive: true 
+    isActive: true,
   });
   if (participants.length !== participantIds.length) {
-    return next(new AppError('One or more participants not found', 400));
+    return next(new AppError("One or more participants not found", 400));
   }
 
   // For direct chats, check if chat already exists
-  if (chatType === 'direct' && participantIds.length === 1) {
+  if (chatType === "direct" && participantIds.length === 1) {
     const existingChat = await Chat.findOne({
-      chatType: 'direct',
-      'participants.user': { $all: [req.user._id, participantIds[0]] },
-      'participants.isActive': true,
-      isActive: true
-    }).populate('participants.user', 'firstName lastName avatar role');
+      chatType: "direct",
+      "participants.user": { $all: [req.user._id, participantIds[0]] },
+      "participants.isActive": true,
+      isActive: true,
+    }).populate("participants.user", "firstName lastName avatar role");
 
     if (existingChat) {
       return res.status(200).json({
-        status: 'success',
-        message: 'Chat already exists',
+        status: "success",
+        message: "Chat already exists",
         data: {
-          chat: existingChat
-        }
+          chat: existingChat,
+        },
       });
     }
   }
@@ -107,32 +107,33 @@ const createChat = catchAsync(async (req, res, next) => {
       user: req.user._id,
       role: req.user.role,
       joinedAt: new Date(),
-      isActive: true
+      isActive: true,
     },
-    ...participantIds.map(id => ({
+    ...participantIds.map((id) => ({
       user: id,
-      role: participants.find(p => p._id.toString() === id).role,
+      role: participants.find((p) => p._id.toString() === id).role,
       joinedAt: new Date(),
-      isActive: true
-    }))
+      isActive: true,
+    })),
   ];
 
   const chat = await Chat.create({
+    chatId: `${req.user._id}-${participantIds.join("-")}-${Date.now()}`,
     participants: chatParticipants,
     chatType,
     title,
     description,
-    lastActivity: new Date()
+    lastActivity: new Date(),
   });
 
-  await chat.populate('participants.user', 'firstName lastName avatar role');
+  await chat.populate("participants.user", "firstName lastName avatar role");
 
   res.status(201).json({
-    status: 'success',
-    message: 'Chat created successfully',
+    status: "success",
+    message: "Chat created successfully",
     data: {
-      chat
-    }
+      chat,
+    },
   });
 });
 
@@ -141,27 +142,27 @@ const getChatById = catchAsync(async (req, res, next) => {
   const { chatId } = req.params;
 
   const chat = await Chat.findById(chatId)
-    .populate('participants.user', 'firstName lastName avatar role')
-    .populate('lastMessage');
+    .populate("participants.user", "firstName lastName avatar role")
+    .populate("lastMessage");
 
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   // Check if user is participant
   const isParticipant = chat.participants.some(
-    p => p.user._id.toString() === req.user._id.toString() && p.isActive
+    (p) => p.user._id.toString() === req.user._id.toString() && p.isActive
   );
 
   if (!isParticipant) {
-    return next(new AppError('Access denied to this chat', 403));
+    return next(new AppError("Access denied to this chat", 403));
   }
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
     data: {
-      chat
-    }
+      chat,
+    },
   });
 });
 
@@ -173,19 +174,19 @@ const getChatMessages = catchAsync(async (req, res, next) => {
   // Verify chat access
   const chat = await Chat.findById(chatId);
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   const isParticipant = chat.participants.some(
-    p => p.user._id.toString() === req.user._id.toString() && p.isActive
+    (p) => p.user._id.toString() === req.user._id.toString() && p.isActive
   );
 
   if (!isParticipant) {
-    return next(new AppError('Access denied to this chat', 403));
+    return next(new AppError("Access denied to this chat", 403));
   }
 
   let query = { chat: chatId, isDeleted: false };
-  
+
   if (before) {
     query.createdAt = { $lt: new Date(before) };
   } else if (after) {
@@ -194,13 +195,13 @@ const getChatMessages = catchAsync(async (req, res, next) => {
 
   const [messages, total] = await Promise.all([
     Message.find(query)
-      .populate('sender', 'firstName lastName avatar role')
-      .populate('replyTo', 'content sender')
+      .populate("sender", "firstName lastName avatar role")
+      .populate("replyTo", "content sender")
       .sort({ createdAt: before ? -1 : 1 })
       .limit(limit * 1)
       .skip((page - 1) * limit),
-    
-    Message.countDocuments({ chat: chatId, isDeleted: false })
+
+    Message.countDocuments({ chat: chatId, isDeleted: false }),
   ]);
 
   // Mark messages as delivered to current user
@@ -208,65 +209,66 @@ const getChatMessages = catchAsync(async (req, res, next) => {
     {
       chat: chatId,
       sender: { $ne: req.user._id },
-      'deliveredTo.user': { $ne: req.user._id },
-      isDeleted: false
+      "deliveredTo.user": { $ne: req.user._id },
+      isDeleted: false,
     },
     {
       $push: {
         deliveredTo: {
           user: req.user._id,
-          deliveredAt: new Date()
-        }
-      }
+          deliveredAt: new Date(),
+        },
+      },
     }
   );
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
     results: messages.length,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
       total,
       pages: Math.ceil(total / limit),
-      hasMore: messages.length === limit
+      hasMore: messages.length === limit,
     },
     data: {
-      messages: before ? messages.reverse() : messages
-    }
+      messages: before ? messages.reverse() : messages,
+    },
   });
 });
 
 // Send message
 const sendMessage = catchAsync(async (req, res, next) => {
   const { chatId } = req.params;
-  const { messageType = 'text', content, replyTo } = req.body;
+  const { messageType = "text", content, replyTo } = req.body;
 
   // Verify chat access
   const chat = await Chat.findById(chatId);
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   const isParticipant = chat.participants.some(
-    p => p.user._id.toString() === req.user._id.toString() && p.isActive
+    (p) => p.user._id.toString() === req.user._id.toString() && p.isActive
   );
 
   if (!isParticipant) {
-    return next(new AppError('Access denied to this chat', 403));
+    return next(new AppError("Access denied to this chat", 403));
   }
 
   const message = await Message.create({
     chat: chatId,
+    messageId: `${chatId}-${Date.now()}`,
     sender: req.user._id,
     messageType,
     content,
-    replyTo: replyTo || null
+    replyTo: replyTo || null,
   });
 
-  await message.populate('sender', 'firstName lastName avatar role');
+  await message.populate("sender", "firstName lastName avatar role");
   if (replyTo) {
-    await message.populate('replyTo', 'content sender');
+    await message.populate("replyTo", "content sender");
   }
 
   // Update chat's last message and activity
@@ -275,52 +277,52 @@ const sendMessage = catchAsync(async (req, res, next) => {
   await chat.save();
 
   res.status(201).json({
-    status: 'success',
-    message: 'Message sent successfully',
+    status: "success",
+    message: "Message sent successfully",
     data: {
-      message
-    }
+      message,
+    },
   });
 });
 
 // Send file message
 const sendFileMessage = catchAsync(async (req, res, next) => {
   const { chatId } = req.params;
-  
+
   if (!req.file) {
-    return next(new AppError('No file uploaded', 400));
+    return next(new AppError("No file uploaded", 400));
   }
 
   // Verify chat access
   const chat = await Chat.findById(chatId);
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   const isParticipant = chat.participants.some(
-    p => p.user._id.toString() === req.user._id.toString() && p.isActive
+    (p) => p.user._id.toString() === req.user._id.toString() && p.isActive
   );
 
   if (!isParticipant) {
-    return next(new AppError('Access denied to this chat', 403));
+    return next(new AppError("Access denied to this chat", 403));
   }
 
   const message = await Message.create({
     chat: chatId,
     sender: req.user._id,
-    messageType: 'file',
+    messageType: "file",
     content: {
       file: {
         filename: req.file.filename,
         originalName: req.file.originalname,
         mimetype: req.file.mimetype,
         size: req.file.size,
-        url: req.file.path
-      }
-    }
+        url: req.file.path,
+      },
+    },
   });
 
-  await message.populate('sender', 'firstName lastName avatar role');
+  await message.populate("sender", "firstName lastName avatar role");
 
   // Update chat's last message and activity
   chat.lastMessage = message._id;
@@ -328,11 +330,11 @@ const sendFileMessage = catchAsync(async (req, res, next) => {
   await chat.save();
 
   res.status(201).json({
-    status: 'success',
-    message: 'File message sent successfully',
+    status: "success",
+    message: "File message sent successfully",
     data: {
-      message
-    }
+      message,
+    },
   });
 });
 
@@ -343,19 +345,19 @@ const editMessage = catchAsync(async (req, res, next) => {
 
   const message = await Message.findById(messageId);
   if (!message) {
-    return next(new AppError('Message not found', 404));
+    return next(new AppError("Message not found", 404));
   }
 
   // Check if user is the sender
   if (message.sender.toString() !== req.user._id.toString()) {
-    return next(new AppError('You can only edit your own messages', 403));
+    return next(new AppError("You can only edit your own messages", 403));
   }
 
   // Store previous content in edit history
   message.editHistory.push({
     previousContent: message.content,
     editedAt: new Date(),
-    reason: 'User edit'
+    reason: "User edit",
   });
 
   message.content = content;
@@ -363,11 +365,11 @@ const editMessage = catchAsync(async (req, res, next) => {
   await message.save();
 
   res.status(200).json({
-    status: 'success',
-    message: 'Message updated successfully',
+    status: "success",
+    message: "Message updated successfully",
     data: {
-      message
-    }
+      message,
+    },
   });
 });
 
@@ -377,12 +379,15 @@ const deleteMessage = catchAsync(async (req, res, next) => {
 
   const message = await Message.findById(messageId);
   if (!message) {
-    return next(new AppError('Message not found', 404));
+    return next(new AppError("Message not found", 404));
   }
 
   // Check if user is the sender or has admin privileges
-  if (message.sender.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-    return next(new AppError('You can only delete your own messages', 403));
+  if (
+    message.sender.toString() !== req.user._id.toString() &&
+    req.user.role !== "admin"
+  ) {
+    return next(new AppError("You can only delete your own messages", 403));
   }
 
   message.isDeleted = true;
@@ -391,8 +396,8 @@ const deleteMessage = catchAsync(async (req, res, next) => {
   await message.save();
 
   res.status(200).json({
-    status: 'success',
-    message: 'Message deleted successfully'
+    status: "success",
+    message: "Message deleted successfully",
   });
 });
 
@@ -403,32 +408,32 @@ const addReaction = catchAsync(async (req, res, next) => {
 
   const message = await Message.findById(messageId);
   if (!message) {
-    return next(new AppError('Message not found', 404));
+    return next(new AppError("Message not found", 404));
   }
 
   // Check if user already reacted with this emoji
   const existingReaction = message.reactions.find(
-    r => r.user.toString() === req.user._id.toString() && r.emoji === emoji
+    (r) => r.user.toString() === req.user._id.toString() && r.emoji === emoji
   );
 
   if (existingReaction) {
-    return next(new AppError('You already reacted with this emoji', 400));
+    return next(new AppError("You already reacted with this emoji", 400));
   }
 
   message.reactions.push({
     user: req.user._id,
     emoji,
-    addedAt: new Date()
+    addedAt: new Date(),
   });
 
   await message.save();
 
   res.status(200).json({
-    status: 'success',
-    message: 'Reaction added successfully',
+    status: "success",
+    message: "Reaction added successfully",
     data: {
-      message
-    }
+      message,
+    },
   });
 });
 
@@ -439,21 +444,21 @@ const removeReaction = catchAsync(async (req, res, next) => {
 
   const message = await Message.findById(messageId);
   if (!message) {
-    return next(new AppError('Message not found', 404));
+    return next(new AppError("Message not found", 404));
   }
 
   message.reactions = message.reactions.filter(
-    r => !(r.user.toString() === req.user._id.toString() && r.emoji === emoji)
+    (r) => !(r.user.toString() === req.user._id.toString() && r.emoji === emoji)
   );
 
   await message.save();
 
   res.status(200).json({
-    status: 'success',
-    message: 'Reaction removed successfully',
+    status: "success",
+    message: "Reaction removed successfully",
     data: {
-      message
-    }
+      message,
+    },
   });
 });
 
@@ -464,22 +469,22 @@ const addParticipant = catchAsync(async (req, res, next) => {
 
   const chat = await Chat.findById(chatId);
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   const user = await User.findById(userId);
   if (!user) {
-    return next(new AppError('User not found', 404));
+    return next(new AppError("User not found", 404));
   }
 
   // Check if user is already a participant
   const existingParticipant = chat.participants.find(
-    p => p.user.toString() === userId
+    (p) => p.user.toString() === userId
   );
 
   if (existingParticipant) {
     if (existingParticipant.isActive) {
-      return next(new AppError('User is already a participant', 400));
+      return next(new AppError("User is already a participant", 400));
     } else {
       // Reactivate participant
       existingParticipant.isActive = true;
@@ -491,18 +496,18 @@ const addParticipant = catchAsync(async (req, res, next) => {
       user: userId,
       role: user.role,
       joinedAt: new Date(),
-      isActive: true
+      isActive: true,
     });
   }
 
   await chat.save();
 
   res.status(200).json({
-    status: 'success',
-    message: 'Participant added successfully',
+    status: "success",
+    message: "Participant added successfully",
     data: {
-      chat
-    }
+      chat,
+    },
   });
 });
 
@@ -512,15 +517,15 @@ const removeParticipant = catchAsync(async (req, res, next) => {
 
   const chat = await Chat.findById(chatId);
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   const participant = chat.participants.find(
-    p => p.user.toString() === userId
+    (p) => p.user.toString() === userId
   );
 
   if (!participant) {
-    return next(new AppError('Participant not found', 404));
+    return next(new AppError("Participant not found", 404));
   }
 
   participant.isActive = false;
@@ -529,8 +534,8 @@ const removeParticipant = catchAsync(async (req, res, next) => {
   await chat.save();
 
   res.status(200).json({
-    status: 'success',
-    message: 'Participant removed successfully'
+    status: "success",
+    message: "Participant removed successfully",
   });
 });
 
@@ -546,15 +551,15 @@ const updateChatSettings = catchAsync(async (req, res, next) => {
   );
 
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   res.status(200).json({
-    status: 'success',
-    message: 'Chat settings updated successfully',
+    status: "success",
+    message: "Chat settings updated successfully",
     data: {
-      chat
-    }
+      chat,
+    },
   });
 });
 
@@ -564,25 +569,25 @@ const searchMessages = catchAsync(async (req, res, next) => {
   const { query, page = 1, limit = 20 } = req.query;
 
   if (!query) {
-    return next(new AppError('Search query is required', 400));
+    return next(new AppError("Search query is required", 400));
   }
 
   const messages = await Message.find({
     chat: chatId,
-    'content.text': { $regex: query, $options: 'i' },
-    isDeleted: false
+    "content.text": { $regex: query, $options: "i" },
+    isDeleted: false,
   })
-    .populate('sender', 'firstName lastName avatar role')
+    .populate("sender", "firstName lastName avatar role")
     .sort({ createdAt: -1 })
     .limit(limit * 1)
     .skip((page - 1) * limit);
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
     results: messages.length,
     data: {
-      messages
-    }
+      messages,
+    },
   });
 });
 
@@ -592,28 +597,28 @@ const markMessagesAsRead = catchAsync(async (req, res, next) => {
   const { messageIds } = req.body;
 
   if (!messageIds || messageIds.length === 0) {
-    return next(new AppError('Message IDs are required', 400));
+    return next(new AppError("Message IDs are required", 400));
   }
 
   await Message.updateMany(
     {
       _id: { $in: messageIds },
       chat: chatId,
-      'readBy.user': { $ne: req.user._id }
+      "readBy.user": { $ne: req.user._id },
     },
     {
       $push: {
         readBy: {
           user: req.user._id,
-          readAt: new Date()
-        }
-      }
+          readAt: new Date(),
+        },
+      },
     }
   );
 
   res.status(200).json({
-    status: 'success',
-    message: 'Messages marked as read'
+    status: "success",
+    message: "Messages marked as read",
   });
 });
 
@@ -623,7 +628,7 @@ const getChatStats = catchAsync(async (req, res, next) => {
 
   const chat = await Chat.findById(chatId);
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   const stats = await Message.aggregate([
@@ -633,22 +638,22 @@ const getChatStats = catchAsync(async (req, res, next) => {
         _id: null,
         totalMessages: { $sum: 1 },
         messagesByType: {
-          $push: '$messageType'
+          $push: "$messageType",
         },
         messagesBySender: {
-          $push: '$sender'
+          $push: "$sender",
         },
-        firstMessage: { $min: '$createdAt' },
-        lastMessage: { $max: '$createdAt' }
-      }
-    }
+        firstMessage: { $min: "$createdAt" },
+        lastMessage: { $max: "$createdAt" },
+      },
+    },
   ]);
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
     data: {
-      stats: stats[0] || {}
-    }
+      stats: stats[0] || {},
+    },
   });
 });
 
@@ -664,15 +669,15 @@ const updateChat = catchAsync(async (req, res, next) => {
   );
 
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   res.status(200).json({
-    status: 'success',
-    message: 'Chat updated successfully',
+    status: "success",
+    message: "Chat updated successfully",
     data: {
-      chat
-    }
+      chat,
+    },
   });
 });
 
@@ -682,20 +687,20 @@ const deleteChat = catchAsync(async (req, res, next) => {
 
   const chat = await Chat.findById(chatId);
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   // Only allow deletion by doctors or admins
-  if (req.user.role !== 'doctor' && req.user.role !== 'admin') {
-    return next(new AppError('Only doctors can delete chats', 403));
+  if (req.user.role !== "doctor" && req.user.role !== "admin") {
+    return next(new AppError("Only doctors can delete chats", 403));
   }
 
   chat.isActive = false;
   await chat.save();
 
   res.status(200).json({
-    status: 'success',
-    message: 'Chat deleted successfully'
+    status: "success",
+    message: "Chat deleted successfully",
   });
 });
 
@@ -706,23 +711,23 @@ const updateParticipantRole = catchAsync(async (req, res, next) => {
 
   const chat = await Chat.findById(chatId);
   if (!chat) {
-    return next(new AppError('Chat not found', 404));
+    return next(new AppError("Chat not found", 404));
   }
 
   const participant = chat.participants.find(
-    p => p.user.toString() === userId
+    (p) => p.user.toString() === userId
   );
 
   if (!participant) {
-    return next(new AppError('Participant not found', 404));
+    return next(new AppError("Participant not found", 404));
   }
 
   participant.role = role;
   await chat.save();
 
   res.status(200).json({
-    status: 'success',
-    message: 'Participant role updated successfully'
+    status: "success",
+    message: "Participant role updated successfully",
   });
 });
 
@@ -745,5 +750,5 @@ module.exports = {
   markMessagesAsRead,
   getChatStats,
   updateChat,
-  deleteChat
+  deleteChat,
 };

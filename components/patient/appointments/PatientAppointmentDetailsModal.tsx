@@ -138,18 +138,20 @@ export function PatientAppointmentDetailsModal({
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <Avatar className="w-16 h-16">
-                  <AvatarImage src="https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face" />
+                  <AvatarImage src={appointment.doctorAvatar} />
                   <AvatarFallback>
                     {appointment.doctor || appointment.fullDoctorName?.split(' ').map((n: string) => n[0]).join('') || 'DR'}
                   </AvatarFallback>
                 </Avatar>
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+                {appointment.isOnline && (
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+                )}
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900">
                   {appointment.fullDoctorName || appointment.doctorName || 'Doctor'}
                 </h3>
-                <p className="text-sm text-blue-600 mb-1">{appointment.specialty || 'General Practice'}</p>
+                <p className="text-sm text-blue-600 mb-1">{appointment.doctorSpecialty || 'General Practice'}</p>
                 <div className="flex items-center space-x-1 mb-1">
                   {renderStars(appointment.rating || 4.5)}
                   <span className="text-sm text-gray-600 ml-1">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { chatAPI } from "@/lib/api";
+import { chatAPI, doctorsAPI, patientsAPI } from "@/lib/api";
 import { socketService } from "@/lib/socket";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -130,13 +130,64 @@ export function ChatContent() {
         const firstChat = chatsData[0];
         setSelectedChat(firstChat._id);
         fetchMessages(firstChat._id);
+      } else {
+        // If no chats exist, try to create initial chats with connected doctors/patients
+        await createInitialChats();
       }
     } catch (error) {
       console.error("Failed to fetch chats:", error);
-      // If no chats exist, show empty state
       setChats([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const createInitialChats = async () => {
+    try {
+      if (user?.role === "patient") {
+        // Get connected doctors and create chats
+        const response = await patientsAPI.getPatientDoctors();
+        const doctors = response.data.data.doctors || [];
+
+        for (const doctorConnection of doctors.slice(0, 3)) {
+          // Limit to first 3
+          if (doctorConnection.status === "active") {
+            try {
+              await chatAPI.createChat({
+                participantIds: [doctorConnection.doctor.user._id],
+                chatType: "direct",
+              });
+            } catch (error) {
+              // Chat might already exist, ignore error
+            }
+          }
+        }
+      } else if (user?.role === "doctor") {
+        // Get connected patients and create chats
+        const response = await doctorsAPI.getDoctorPatients();
+        const patients = response.data.data.patients || [];
+
+        for (const patientConnection of patients.slice(0, 3)) {
+          // Limit to first 3
+          if (patientConnection.status === "active") {
+            try {
+              await chatAPI.createChat({
+                participantIds: [patientConnection.patient.user._id],
+                chatType: "direct",
+              });
+            } catch (error) {
+              // Chat might already exist, ignore error
+            }
+          }
+        }
+      }
+
+      // Refetch chats after creation
+      setTimeout(() => {
+        fetchChats();
+      }, 1000);
+    } catch (error) {
+      console.error("Failed to create initial chats:", error);
     }
   };
 
